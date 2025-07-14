@@ -66,6 +66,9 @@
     "format:check": "prettier --check src/**/*.ts tests/**/*.ts",
     "clean": "rm -rf dist",
     "docs": "typedoc src/index.ts",
+    "example:basic": "tsx examples/run-examples.ts basic",
+    "example:chatbot": "tsx examples/run-examples.ts chatbot",
+    "example:all": "tsx examples/run-examples.ts all",
     "prepare": "husky",
     "prepublishOnly": "npm run clean && npm run build && npm test && npm run lint",
     "commit": "cz"
@@ -116,6 +119,7 @@
     "pgvector": "^0.2.1",
     "prettier": "^3.0.0",
     "tsup": "^8.0.0",
+    "tsx": "^4.20.3",
     "typedoc": "^0.25.0",
     "typescript": "^5.2.0",
     "vitest": "^3.2.4"
