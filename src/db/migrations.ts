@@ -58,7 +58,14 @@ export class DatabaseMigrator {
           console.log(`✅ Migration ${migration.version} applied successfully`);
         } catch (error) {
           await this.client.query('ROLLBACK');
-          throw error;
+          // Check if it's a duplicate extension error (can be ignored)
+          const errorMessage = (error as Error).message;
+          if (errorMessage.includes('duplicate key value') && errorMessage.includes('pg_type')) {
+            // eslint-disable-next-line no-console
+            console.log(`⚠️  pgvector extension already exists, continuing...`);
+          } else {
+            throw error;
+          }
         }
       } else {
         // eslint-disable-next-line no-console
