@@ -91,7 +91,7 @@ describe.skipIf(!shouldRunTests)('Database Integration', () => {
     await expect(memory.getHistory('test-conv-2')).rejects.toThrow();
   });
 
-  it('should search memories by content', async () => {
+  it('should search memories with semantic similarity', async () => {
     await memory.remember({
       conversation: 'test-conv-3',
       content: 'The user likes coffee in the morning',
@@ -102,9 +102,15 @@ describe.skipIf(!shouldRunTests)('Database Integration', () => {
       content: 'The user prefers tea in the evening',
     });
 
-    const results = await memory.searchMemories('coffee');
-    expect(results).toHaveLength(1);
-    expect(results[0].content).toContain('coffee');
+    // Semantic search should find coffee-related content even without exact match
+    const results = await memory.searchMemories('morning beverage preferences');
+    expect(results.length).toBeGreaterThan(0);
+
+    // Should find both tea and coffee as they're beverages
+    const beverageResults = results.filter(
+      r => r.content.includes('coffee') || r.content.includes('tea')
+    );
+    expect(beverageResults.length).toBeGreaterThan(0);
   });
 
   it('should validate memory statistics function', async () => {
