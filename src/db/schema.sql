@@ -1,11 +1,6 @@
 -- Enable pgvector extension (ignore if already exists)
-DO $$ 
-BEGIN
-    CREATE EXTENSION IF NOT EXISTS vector;
-EXCEPTION WHEN OTHERS THEN
-    -- Extension might already exist, continue
-    NULL;
-END $$;
+-- Note: pgvector/pgvector:pg16 image already has the extension available
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Memories table for storing agent conversations and context
 CREATE TABLE IF NOT EXISTS agent_memories (
@@ -99,6 +94,7 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger to auto-update timestamps
+DROP TRIGGER IF EXISTS update_agent_memories_updated_at ON agent_memories;
 CREATE TRIGGER update_agent_memories_updated_at 
     BEFORE UPDATE ON agent_memories 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

@@ -58,7 +58,7 @@ export class AgentMemory implements AgentMemoryInterface {
       } catch (error) {
         // Ignore cleanup errors during initial setup
         // eslint-disable-next-line no-console
-        console.warn('Skipping cleanup during initial setup:', (error as Error).message);
+        console.warn('Failed to cleanup expired memories:', (error as Error).message);
       }
     } catch (error) {
       throw new DatabaseConnectionError(error as Error);

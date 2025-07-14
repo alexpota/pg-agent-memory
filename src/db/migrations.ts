@@ -66,9 +66,21 @@ export class DatabaseMigrator {
             console.log(`⚠️  pgvector extension already exists, continuing...`);
 
             // Still need to mark migration as applied
+            await this.client.query('BEGIN');
             await this.client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [
               migration.version,
             ]);
+            await this.client.query('COMMIT');
+          } else if (errorMessage.includes('already exists')) {
+            // eslint-disable-next-line no-console
+            console.log(`⚠️  ${migration.description} already exists, continuing...`);
+            
+            // Still need to mark migration as applied
+            await this.client.query('BEGIN');
+            await this.client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [
+              migration.version,
+            ]);
+            await this.client.query('COMMIT');
           } else {
             throw error;
           }

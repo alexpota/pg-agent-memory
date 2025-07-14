@@ -5,7 +5,11 @@ import { AgentMemory, EmbeddingService } from '../../src/index.js';
 // Skip integration tests if no database URL provided
 const DATABASE_URL = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
 const shouldRunTests =
-  DATABASE_URL && DATABASE_URL !== 'postgresql://test:test@localhost:5432/test';
+  DATABASE_URL && 
+  DATABASE_URL !== 'postgresql://test:test@localhost:5432/test' &&
+  !DATABASE_URL.includes('fake') &&
+  !DATABASE_URL.includes('example');
+
 
 describe.skipIf(!shouldRunTests)('Vector Operations Integration', () => {
   let memory: AgentMemory;

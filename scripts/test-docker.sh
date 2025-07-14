@@ -49,10 +49,16 @@ export TEST_DATABASE_URL=$DATABASE_URL
 
 echo "✅ PostgreSQL ready at: $DATABASE_URL"
 
-# Run tests
+# Run tests sequentially to avoid race conditions
 echo ""
 echo "🧪 Running integration tests..."
-npm run test:integration
+echo "Using DATABASE_URL: $DATABASE_URL"
+echo "Running database tests..."
+DATABASE_URL="$DATABASE_URL" npx vitest run tests/integration/database.test.ts
+
+echo ""
+echo "Running embeddings tests..."
+DATABASE_URL="$DATABASE_URL" npx vitest run tests/integration/embeddings.test.ts
 
 # Run examples if requested
 if [ "$1" = "--with-examples" ]; then
