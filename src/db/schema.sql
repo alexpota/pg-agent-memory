@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Memories table for storing agent conversations and context
 CREATE TABLE IF NOT EXISTS agent_memories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(30) PRIMARY KEY, -- ULID format: mem_01ARZ3NDEKTSV4RRFFQ69G5FAV
     agent_id VARCHAR(255) NOT NULL,
     conversation_id VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
@@ -44,8 +44,8 @@ WHERE embedding IS NOT NULL;
 
 -- Memory sharing table for multi-agent scenarios
 CREATE TABLE IF NOT EXISTS agent_memory_shares (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    memory_id UUID NOT NULL REFERENCES agent_memories(id) ON DELETE CASCADE,
+    id VARCHAR(30) PRIMARY KEY, -- ULID format
+    memory_id VARCHAR(30) NOT NULL REFERENCES agent_memories(id) ON DELETE CASCADE,
     shared_with_agent VARCHAR(255) NOT NULL,
     scope VARCHAR(20) NOT NULL DEFAULT 'shared',
     granted_by VARCHAR(255) NOT NULL,
@@ -64,7 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_memory_shares_scope ON agent_memory_shares(scope)
 
 -- Memory summaries table for compression
 CREATE TABLE IF NOT EXISTS agent_memory_summaries (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(30) PRIMARY KEY, -- ULID format
     agent_id VARCHAR(255) NOT NULL,
     conversation_id VARCHAR(255) NOT NULL,
     summary TEXT NOT NULL,

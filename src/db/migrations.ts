@@ -13,7 +13,6 @@ export class DatabaseMigrator {
 
   async migrate(): Promise<void> {
     try {
-      await this.client.connect();
       await this.runMigrations();
     } catch (error) {
       throw new DatabaseConnectionError(error as Error);

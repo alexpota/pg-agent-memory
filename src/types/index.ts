@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const MemoryConfigSchema = z.object({
   agent: z.string().min(1),
   connectionString: z.string().min(1),
-  tablePrefix: z.string().default('agent_memory'),
+  tablePrefix: z.string().default('agent'),
   maxTokens: z.number().positive().default(4000),
   embeddingDimensions: z.number().positive().default(1536),
   compressionThreshold: z.number().min(0).max(1).default(0.8),
