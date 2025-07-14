@@ -1,5 +1,11 @@
--- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Enable pgvector extension (ignore if already exists)
+DO $$ 
+BEGIN
+    CREATE EXTENSION IF NOT EXISTS vector;
+EXCEPTION WHEN OTHERS THEN
+    -- Extension might already exist, continue
+    NULL;
+END $$;
 
 -- Memories table for storing agent conversations and context
 CREATE TABLE IF NOT EXISTS agent_memories (

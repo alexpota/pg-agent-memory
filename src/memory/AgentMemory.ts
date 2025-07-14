@@ -52,7 +52,14 @@ export class AgentMemory implements AgentMemoryInterface {
       // Initialize embedding service (downloads model on first run)
       await this.embeddingService.initialize();
 
-      await this.cleanupExpiredMemories();
+      // Cleanup expired memories only if tables exist
+      try {
+        await this.cleanupExpiredMemories();
+      } catch (error) {
+        // Ignore cleanup errors during initial setup
+        // eslint-disable-next-line no-console
+        console.warn('Skipping cleanup during initial setup:', (error as Error).message);
+      }
     } catch (error) {
       throw new DatabaseConnectionError(error as Error);
     }

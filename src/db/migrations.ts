@@ -58,11 +58,17 @@ export class DatabaseMigrator {
           console.log(`✅ Migration ${migration.version} applied successfully`);
         } catch (error) {
           await this.client.query('ROLLBACK');
+
           // Check if it's a duplicate extension error (can be ignored)
           const errorMessage = (error as Error).message;
           if (errorMessage.includes('duplicate key value') && errorMessage.includes('pg_type')) {
             // eslint-disable-next-line no-console
             console.log(`⚠️  pgvector extension already exists, continuing...`);
+
+            // Still need to mark migration as applied
+            await this.client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [
+              migration.version,
+            ]);
           } else {
             throw error;
           }

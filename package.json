@@ -59,6 +59,7 @@
     "test:coverage": "vitest --run --coverage",
     "test:integration": "vitest --run tests/integration",
     "test:docker": "bash scripts/test-docker.sh",
+    "test:docker:alt": "bash scripts/test-docker-alt.sh",
     "dev:up": "bash scripts/docker-dev.sh up",
     "dev:down": "bash scripts/docker-dev.sh down",
     "dev:clean": "bash scripts/docker-dev.sh clean",
