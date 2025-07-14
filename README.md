@@ -208,21 +208,72 @@ npm run example:all
 
 ## Development
 
-### Setup
+### Quick Start with Docker
 
 ```bash
+# Clone repository
 git clone <repository>
 cd pg-agent-memory
 npm install
+
+# Start PostgreSQL with pgvector
+npm run dev:up
+
+# Copy environment variables
+cp .env.example .env
+
+# Run examples
+npm run example:basic
+
+# Run tests
+npm run test:docker
+```
+
+### Docker Commands
+
+```bash
+# Start development database
+npm run dev:up
+
+# Stop database (data persists)
+npm run dev:down
+
+# View database logs
+npm run dev:logs
+
+# Clean everything (including data)
+npm run dev:clean
+
+# Connect to PostgreSQL shell
+bash scripts/docker-dev.sh shell
+```
+
+### Manual Setup
+
+If you prefer using your own PostgreSQL:
+
+```bash
+# Install pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+# Set connection string
+export DATABASE_URL="postgresql://user:pass@localhost:5432/dbname"
+
+# Run tests
+npm test
+npm run test:integration
 ```
 
 ### Testing
 
 ```bash
-# Unit tests
+# Unit tests (no database needed)
 npm test
 
-# Integration tests (requires PostgreSQL)
+# Integration tests with Docker
+npm run test:docker
+
+# Integration tests with custom database
 export DATABASE_URL="postgresql://user:pass@localhost:5432/test_db"
 npm run test:integration
 
