@@ -94,6 +94,6 @@ describe('AgentMemory', () => {
     expect(id1).toBeDefined();
     expect(id2).toBeDefined();
     expect(id1).not.toBe(id2);
-    expect(id1).toMatch(/^mem_\d+_[a-z0-9]+$/);
+    expect(id1).toMatch(/^mem_[0-9A-HJKMNP-TV-Z]{26}$/);
   });
 });

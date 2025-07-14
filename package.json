@@ -89,9 +89,10 @@
     "pg": ">=8.0.0"
   },
   "dependencies": {
-    "zod": "^3.22.0",
     "p-queue": "^8.0.0",
-    "tiktoken": "^1.0.0"
+    "tiktoken": "^1.0.0",
+    "ulid": "^3.0.1",
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

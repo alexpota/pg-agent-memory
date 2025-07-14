@@ -1,5 +1,6 @@
 import { Client } from 'pg';
 import { encoding_for_model } from 'tiktoken';
+import { ulid } from 'ulid';
 import {
   MemoryConfig,
   MemoryConfigSchema,
@@ -301,7 +302,7 @@ export class AgentMemory implements AgentMemoryInterface {
   }
 
   private generateId(): string {
-    return `mem_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    return `mem_${ulid()}`;
   }
 
   private countTokens(text: string): number {
