@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Fast fail on type errors first
+echo "🔍 Running TypeScript type check..."
+npm run type-check
+
+# Run lint-staged for efficient validation of changed files
+echo "✨ Running lint-staged..."
+npx lint-staged
+
+# Run unit tests only (skip integration tests that need PostgreSQL)
+echo "🧪 Running unit tests..."
+npm run test
