@@ -86,7 +86,7 @@ export class AgentMemory implements AgentMemoryInterface {
           validatedMessage.conversation,
           validatedMessage.content,
           validatedMessage.role,
-          JSON.stringify(validatedMessage.metadata || {}),
+          JSON.stringify(validatedMessage.metadata ?? {}),
           validatedMessage.importance,
           validatedMessage.timestamp,
           expiresAt,
@@ -210,12 +210,12 @@ export class AgentMemory implements AgentMemoryInterface {
     }
   }
 
-  async summarizeOldConversations(_conversation: string): Promise<void> {
-    throw new MemoryError('Memory summarization not yet implemented');
+  summarizeOldConversations(_conversation: string): Promise<void> {
+    return Promise.reject(new MemoryError('Memory summarization not yet implemented'));
   }
 
-  async shareMemoryBetweenAgents(_agentIds: string[], _scope: MemoryScope): Promise<void> {
-    throw new MemoryError('Memory sharing not yet implemented');
+  shareMemoryBetweenAgents(_agentIds: string[], _scope: MemoryScope): Promise<void> {
+    return Promise.reject(new MemoryError('Memory sharing not yet implemented'));
   }
 
   async searchMemories(query: string, filters?: MemoryFilter): Promise<Message[]> {
@@ -244,12 +244,12 @@ export class AgentMemory implements AgentMemoryInterface {
     }
   }
 
-  async getMemoryGraph(_conversation?: string): Promise<KnowledgeGraph> {
-    throw new MemoryError('Memory graph not yet implemented');
+  getMemoryGraph(_conversation?: string): Promise<KnowledgeGraph> {
+    return Promise.reject(new MemoryError('Memory graph not yet implemented'));
   }
 
-  async detectPatterns(_conversation?: string): Promise<Pattern[]> {
-    throw new MemoryError('Pattern detection not yet implemented');
+  detectPatterns(_conversation?: string): Promise<Pattern[]> {
+    return Promise.reject(new MemoryError('Pattern detection not yet implemented'));
   }
 
   async deleteMemory(memoryId: string): Promise<void> {
@@ -301,7 +301,7 @@ export class AgentMemory implements AgentMemoryInterface {
   }
 
   private generateId(): string {
-    return `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `mem_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   private countTokens(text: string): number {
@@ -369,11 +369,11 @@ export class AgentMemory implements AgentMemoryInterface {
       conversation: row.conversation_id,
       content: row.content,
       role: row.role as 'user' | 'assistant' | 'system',
-      metadata: row.metadata || undefined,
+      metadata: row.metadata ?? undefined,
       importance: row.importance,
-      embedding: row.embedding || undefined,
+      embedding: row.embedding ?? undefined,
       timestamp: row.created_at,
-      expires: row.expires_at || undefined,
+      expires: row.expires_at ?? undefined,
     };
   };
 
@@ -386,6 +386,7 @@ export class AgentMemory implements AgentMemoryInterface {
     try {
       await this.client.query('SELECT cleanup_expired_memories()');
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Failed to cleanup expired memories:', error);
     }
   }

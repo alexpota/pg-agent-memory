@@ -44,6 +44,7 @@ export class DatabaseMigrator {
       );
 
       if (rows.length === 0) {
+        // eslint-disable-next-line no-console
         console.log(`Applying migration: ${migration.description}`);
 
         await this.client.query('BEGIN');
@@ -54,12 +55,14 @@ export class DatabaseMigrator {
           ]);
           await this.client.query('COMMIT');
 
+          // eslint-disable-next-line no-console
           console.log(`✅ Migration ${migration.version} applied successfully`);
         } catch (error) {
           await this.client.query('ROLLBACK');
           throw error;
         }
       } else {
+        // eslint-disable-next-line no-console
         console.log(`⏭️  Migration ${migration.version} already applied`);
       }
     }
@@ -86,7 +89,8 @@ export class DatabaseMigrator {
           [table]
         );
 
-        if (!rows[0].exists) {
+        if (!(rows[0] as { exists: boolean }).exists) {
+          // eslint-disable-next-line no-console
           console.error(`❌ Required table '${table}' not found`);
           return false;
         }
@@ -100,7 +104,8 @@ export class DatabaseMigrator {
         );
       `);
 
-      if (!extensionRows[0].exists) {
+      if (!(extensionRows[0] as { exists: boolean }).exists) {
+        // eslint-disable-next-line no-console
         console.error('❌ pgvector extension not found');
         return false;
       }
@@ -113,13 +118,16 @@ export class DatabaseMigrator {
       `);
 
       if (indexRows.length === 0) {
+        // eslint-disable-next-line no-console
         console.error('❌ Vector indexes not found');
         return false;
       }
 
+      // eslint-disable-next-line no-console
       console.log('✅ Database schema validation passed');
       return true;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('❌ Schema validation failed:', error);
       return false;
     }
@@ -132,14 +140,14 @@ export class DatabaseMigrator {
     const tables = ['agent_memories', 'agent_memory_shares', 'agent_memory_summaries'];
     for (const table of tables) {
       const { rows } = await this.client.query(`SELECT COUNT(*) FROM ${table}`);
-      info[`${table}_count`] = parseInt(rows[0].count);
+      info[`${table}_count`] = parseInt((rows[0] as { count: string }).count, 10);
     }
 
     // Get database size
     const { rows: sizeRows } = await this.client.query(`
       SELECT pg_size_pretty(pg_database_size(current_database())) as size
     `);
-    info.database_size = sizeRows[0].size;
+    info.database_size = (sizeRows[0] as { size: string }).size;
 
     // Get index information
     const { rows: indexRows } = await this.client.query(`
