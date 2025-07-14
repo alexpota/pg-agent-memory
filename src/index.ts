@@ -20,6 +20,7 @@ export {
   CompressionError,
 } from './errors/index.js';
 export { DatabaseMigrator } from './db/migrations.js';
+export { EmbeddingService } from './embeddings/EmbeddingService.js';
 
 // Re-export important types for convenience
 export type { AgentMemoryInterface, KnowledgeGraph, Pattern } from './types/index.js';

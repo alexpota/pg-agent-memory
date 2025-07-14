@@ -5,7 +5,7 @@ export const MemoryConfigSchema = z.object({
   connectionString: z.string().min(1),
   tablePrefix: z.string().default('agent'),
   maxTokens: z.number().positive().default(4000),
-  embeddingDimensions: z.number().positive().default(1536),
+  embeddingDimensions: z.number().positive().default(384),
   compressionThreshold: z.number().min(0).max(1).default(0.8),
   retentionDays: z.number().positive().default(90),
 });

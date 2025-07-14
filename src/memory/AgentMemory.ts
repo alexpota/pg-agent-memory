@@ -22,11 +22,13 @@ import {
   TokenLimitExceededError,
 } from '../errors/index.js';
 import { DatabaseMigrator } from '../db/migrations.js';
+import { EmbeddingService } from '../embeddings/EmbeddingService.js';
 
 export class AgentMemory implements AgentMemoryInterface {
   private readonly client: Client;
   private readonly config: MemoryConfig;
   private readonly tokenizer = encoding_for_model('gpt-3.5-turbo');
+  private readonly embeddingService = EmbeddingService.getInstance();
   private isConnected = false;
 
   constructor(config: Partial<MemoryConfig>) {
@@ -46,6 +48,9 @@ export class AgentMemory implements AgentMemoryInterface {
       if (!isValid) {
         throw new MemoryError('Database schema validation failed');
       }
+
+      // Initialize embedding service (downloads model on first run)
+      await this.embeddingService.initialize();
 
       await this.cleanupExpiredMemories();
     } catch (error) {
@@ -73,13 +78,16 @@ export class AgentMemory implements AgentMemoryInterface {
 
     const expiresAt = this.parseExpiration(validatedMessage.expires);
 
+    // Generate embedding for semantic search
+    const embedding = await this.embeddingService.generateEmbedding(validatedMessage.content);
+
     try {
       await this.client.query(
         `
         INSERT INTO ${this.config.tablePrefix}_memories (
           id, agent_id, conversation_id, content, role, metadata, 
-          importance, created_at, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          importance, embedding, created_at, expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `,
         [
           id,
@@ -89,6 +97,7 @@ export class AgentMemory implements AgentMemoryInterface {
           validatedMessage.role,
           JSON.stringify(validatedMessage.metadata ?? {}),
           validatedMessage.importance,
+          JSON.stringify(embedding),
           validatedMessage.timestamp,
           expiresAt,
         ]
@@ -172,21 +181,27 @@ export class AgentMemory implements AgentMemoryInterface {
     this.ensureConnected();
 
     try {
-      // For now, implement basic text matching - vector search will be added later
+      // Generate embedding for the query
+      const queryEmbedding = await this.embeddingService.generateEmbedding(query);
+
+      // Use pgvector cosine similarity search
       const { rows } = await this.client.query<DatabaseRow>(
         `
         SELECT 
           id, agent_id, conversation_id, content, role, metadata,
-          importance, embedding, created_at, expires_at
+          importance, embedding, created_at, expires_at,
+          (embedding::vector <=> $3::vector) as distance
         FROM ${this.config.tablePrefix}_memories
-        WHERE agent_id = $1 AND conversation_id = $2 AND content ILIKE $3
-        ORDER BY importance DESC
+        WHERE agent_id = $1 AND conversation_id = $2 AND embedding IS NOT NULL
+        ORDER BY (embedding::vector <=> $3::vector) ASC, importance DESC
+        LIMIT 50
       `,
-        [this.config.agent, conversation, `%${query}%`]
+        [this.config.agent, conversation, JSON.stringify(queryEmbedding)]
       );
 
       let totalTokens = 0;
       const relevantMessages: Message[] = [];
+      const similarities: number[] = [];
 
       for (const row of rows) {
         const message = this.mapRowToMessage(row);
@@ -194,16 +209,21 @@ export class AgentMemory implements AgentMemoryInterface {
 
         if (totalTokens + messageTokens <= maxTokens) {
           relevantMessages.push(message);
+          // Convert distance to similarity (1 - distance for cosine)
+          similarities.push(1 - (row as DatabaseRow & { distance: number }).distance);
           totalTokens += messageTokens;
         } else {
           break;
         }
       }
 
+      // Calculate weighted relevance score using similarity and importance
+      const relevanceScore = this.calculateSemanticRelevanceScore(relevantMessages, similarities);
+
       return {
         messages: relevantMessages,
         totalTokens,
-        relevanceScore: this.calculateRelevanceScore(relevantMessages),
+        relevanceScore,
         lastUpdated: new Date(),
       };
     } catch (error) {
@@ -222,21 +242,26 @@ export class AgentMemory implements AgentMemoryInterface {
   async searchMemories(query: string, filters?: MemoryFilter): Promise<Message[]> {
     this.ensureConnected();
 
-    const whereClause = filters ? this.buildWhereClause(filters) : '';
-    const params = filters ? this.buildQueryParams(filters) : [];
-
     try {
+      // Generate embedding for semantic search
+      const queryEmbedding = await this.embeddingService.generateEmbedding(query);
+
+      const whereClause = filters ? this.buildWhereClause(filters) : '';
+      const params = filters ? this.buildQueryParams(filters) : [];
+
+      // Combine semantic similarity with text search and filters
       const { rows } = await this.client.query<DatabaseRow>(
         `
         SELECT 
           id, agent_id, conversation_id, content, role, metadata,
-          importance, embedding, created_at, expires_at
+          importance, embedding, created_at, expires_at,
+          (embedding::vector <=> $2::vector) as distance
         FROM ${this.config.tablePrefix}_memories
-        WHERE agent_id = $1 AND content ILIKE $2 ${whereClause}
-        ORDER BY importance DESC, created_at DESC
+        WHERE agent_id = $1 AND embedding IS NOT NULL ${whereClause}
+        ORDER BY (embedding::vector <=> $2::vector) ASC, importance DESC, created_at DESC
         ${filters?.limit ? `LIMIT ${filters.limit}` : 'LIMIT 100'}
       `,
-        [this.config.agent, `%${query}%`, ...params]
+        [this.config.agent, JSON.stringify(queryEmbedding), ...params]
       );
 
       return rows.map(this.mapRowToMessage);
@@ -381,6 +406,22 @@ export class AgentMemory implements AgentMemoryInterface {
   private calculateRelevanceScore(messages: Message[]): number {
     if (messages.length === 0) return 0;
     return messages.reduce((sum, msg) => sum + msg.importance, 0) / messages.length;
+  }
+
+  private calculateSemanticRelevanceScore(messages: Message[], similarities: number[]): number {
+    if (messages.length === 0 || similarities.length === 0) return 0;
+
+    // Weighted combination of semantic similarity and importance
+    let totalScore = 0;
+    for (let i = 0; i < messages.length; i++) {
+      const semanticWeight = 0.7; // 70% semantic similarity
+      const importanceWeight = 0.3; // 30% importance
+
+      totalScore +=
+        semanticWeight * (similarities[i] ?? 0) + importanceWeight * (messages[i]?.importance ?? 0);
+    }
+
+    return totalScore / messages.length;
   }
 
   private async cleanupExpiredMemories(): Promise<void> {

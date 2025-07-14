@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS agent_memories (
     role VARCHAR(20) NOT NULL DEFAULT 'user',
     metadata JSONB DEFAULT '{}',
     importance REAL NOT NULL DEFAULT 0.5 CHECK (importance >= 0 AND importance <= 1),
-    embedding vector(1536), -- OpenAI ada-002 dimensions
+    embedding vector(384), -- Sentence Transformers MiniLM-L6-v2 dimensions
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ,
