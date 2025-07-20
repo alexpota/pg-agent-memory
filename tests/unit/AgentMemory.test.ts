@@ -50,28 +50,23 @@ describe('AgentMemory', () => {
     });
 
     // Access private method through type assertion for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const parseExpiration = (memory as any).parseExpiration.bind(memory);
+    const parseExpiration = (
+      memory as unknown as { parseExpiration: (expires?: Date | string | null) => Date | null }
+    ).parseExpiration.bind(memory);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     expect(parseExpiration(undefined)).toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     expect(parseExpiration(null)).toBeNull();
 
     const date = new Date();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     expect(parseExpiration(date)).toBe(date);
 
     // Test relative time parsing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const hourResult = parseExpiration('2h');
     expect(hourResult).toBeInstanceOf(Date);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const dayResult = parseExpiration('7d');
     expect(dayResult).toBeInstanceOf(Date);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const weekResult = parseExpiration('2w');
     expect(weekResult).toBeInstanceOf(Date);
   });
@@ -83,12 +78,9 @@ describe('AgentMemory', () => {
     });
 
     // Access private method through type assertion for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const generateId = (memory as any).generateId.bind(memory);
+    const generateId = (memory as unknown as { generateId: () => string }).generateId.bind(memory);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const id1 = generateId();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const id2 = generateId();
 
     expect(id1).toBeDefined();

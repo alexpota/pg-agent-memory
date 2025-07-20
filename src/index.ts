@@ -21,7 +21,26 @@ export {
 } from './errors/index.js';
 export { DatabaseMigrator } from './db/migrations.js';
 export { EmbeddingService } from './embeddings/EmbeddingService.js';
+export { CompressionService } from './compression/CompressionService.js';
+export { UniversalTokenizer } from './tokenization/UniversalTokenizer.js';
 export { logger, Logger, LogLevel } from './utils/logger.js';
 
 // Re-export important types for convenience
-export type { AgentMemoryInterface, KnowledgeGraph, Pattern } from './types/index.js';
+export type {
+  AgentMemoryInterface,
+  KnowledgeGraph,
+  Pattern,
+  CompressionConfig,
+  CompressionResult,
+  CompressionStats,
+  MemorySummary,
+  TimeWindow,
+  EnhancedContext,
+  // Multi-model support types
+  ModelProvider,
+  ModelProviderConfig,
+  TokenCountingStrategy,
+  TokenCountResult,
+  TokenCountingOptions,
+  UniversalTokenizerInterface,
+} from './types/index.js';

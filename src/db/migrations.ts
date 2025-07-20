@@ -37,6 +37,11 @@ export class DatabaseMigrator {
         description: 'Create initial agent memories schema',
         sql: this.loadSchemaFile(),
       },
+      {
+        version: '002_enhanced_compression_schema',
+        description: 'Enhanced memory compression schema with comprehensive features',
+        sql: this.loadMigrationFile('002_enhanced_compression_schema.sql'),
+      },
     ];
 
     for (const migration of migrations) {
@@ -87,6 +92,11 @@ export class DatabaseMigrator {
   private loadSchemaFile(): string {
     const schemaPath = join(__dirname, 'schema.sql');
     return readFileSync(schemaPath, 'utf-8');
+  }
+
+  private loadMigrationFile(filename: string): string {
+    const migrationPath = join(__dirname, 'migrations', filename);
+    return readFileSync(migrationPath, 'utf-8');
   }
 
   async validateSchema(): Promise<boolean> {
