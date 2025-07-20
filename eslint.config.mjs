@@ -51,6 +51,12 @@ export default [
     },
   },
   {
+    files: ['**/logger.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     ignores: ['dist/', 'node_modules/', 'coverage/', '*.js', '*.mjs'],
   },
 ];

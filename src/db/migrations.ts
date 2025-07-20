@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import type { Client } from 'pg';
 import { DatabaseConnectionError } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,6 +21,8 @@ export class DatabaseMigrator {
   }
 
   private async runMigrations(): Promise<void> {
+    const INSERT_MIGRATION_SQL = 'INSERT INTO schema_migrations (version) VALUES ($1)';
+
     // Create migrations tracking table
     await this.client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -43,51 +46,40 @@ export class DatabaseMigrator {
       );
 
       if (rows.length === 0) {
-        // eslint-disable-next-line no-console
-        console.log(`Applying migration: ${migration.description}`);
+        logger.info(`Applying migration: ${migration.description}`);
 
         await this.client.query('BEGIN');
         try {
           await this.client.query(migration.sql);
-          await this.client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [
-            migration.version,
-          ]);
+          await this.client.query(INSERT_MIGRATION_SQL, [migration.version]);
           await this.client.query('COMMIT');
 
-          // eslint-disable-next-line no-console
-          console.log(`✅ Migration ${migration.version} applied successfully`);
+          logger.info(`✅ Migration ${migration.version} applied successfully`);
         } catch (error) {
           await this.client.query('ROLLBACK');
 
           // Check if it's a duplicate extension error (can be ignored)
           const errorMessage = (error as Error).message;
           if (errorMessage.includes('duplicate key value') && errorMessage.includes('pg_type')) {
-            // eslint-disable-next-line no-console
-            console.log(`⚠️  pgvector extension already exists, continuing...`);
+            logger.warn(`⚠️  pgvector extension already exists, continuing...`);
 
             // Still need to mark migration as applied
             await this.client.query('BEGIN');
-            await this.client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [
-              migration.version,
-            ]);
+            await this.client.query(INSERT_MIGRATION_SQL, [migration.version]);
             await this.client.query('COMMIT');
           } else if (errorMessage.includes('already exists')) {
-            // eslint-disable-next-line no-console
-            console.log(`⚠️  ${migration.description} already exists, continuing...`);
-            
+            logger.warn(`⚠️  ${migration.description} already exists, continuing...`);
+
             // Still need to mark migration as applied
             await this.client.query('BEGIN');
-            await this.client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [
-              migration.version,
-            ]);
+            await this.client.query(INSERT_MIGRATION_SQL, [migration.version]);
             await this.client.query('COMMIT');
           } else {
             throw error;
           }
         }
       } else {
-        // eslint-disable-next-line no-console
-        console.log(`⏭️  Migration ${migration.version} already applied`);
+        logger.info(`⏭️  Migration ${migration.version} already applied`);
       }
     }
   }
@@ -114,8 +106,7 @@ export class DatabaseMigrator {
         );
 
         if (!(rows[0] as { exists: boolean }).exists) {
-          // eslint-disable-next-line no-console
-          console.error(`❌ Required table '${table}' not found`);
+          logger.error(`❌ Required table '${table}' not found`);
           return false;
         }
       }
@@ -129,8 +120,7 @@ export class DatabaseMigrator {
       `);
 
       if (!(extensionRows[0] as { exists: boolean }).exists) {
-        // eslint-disable-next-line no-console
-        console.error('❌ pgvector extension not found');
+        logger.error('❌ pgvector extension not found');
         return false;
       }
 
@@ -142,17 +132,14 @@ export class DatabaseMigrator {
       `);
 
       if (indexRows.length === 0) {
-        // eslint-disable-next-line no-console
-        console.error('❌ Vector indexes not found');
+        logger.error('❌ Vector indexes not found');
         return false;
       }
 
-      // eslint-disable-next-line no-console
-      console.log('✅ Database schema validation passed');
+      logger.info('✅ Database schema validation passed');
       return true;
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('❌ Schema validation failed:', error);
+      logger.error('❌ Schema validation failed:', error as Error);
       return false;
     }
   }

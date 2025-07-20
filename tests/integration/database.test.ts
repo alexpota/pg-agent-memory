@@ -5,11 +5,10 @@ import { AgentMemory } from '../../src/index.js';
 // Skip integration tests if no database URL provided
 const DATABASE_URL = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
 const shouldRunTests =
-  DATABASE_URL && 
+  DATABASE_URL &&
   DATABASE_URL !== 'postgresql://test:test@localhost:5432/test' &&
   !DATABASE_URL.includes('fake') &&
   !DATABASE_URL.includes('example');
-
 
 describe.skipIf(!shouldRunTests)('Database Integration', () => {
   let memory: AgentMemory;
@@ -120,10 +119,13 @@ describe.skipIf(!shouldRunTests)('Database Integration', () => {
   it('should validate memory statistics function', async () => {
     // Skip if no memories stored yet
     try {
-      const { rows } = await testClient.query('SELECT get_memory_stats($1)', ['test-agent']);
-      
+      const { rows } = await testClient.query<{ get_memory_stats: unknown[] }>(
+        'SELECT get_memory_stats($1)',
+        ['test-agent']
+      );
+
       expect(rows[0]).toHaveProperty('get_memory_stats');
-      const stats = rows[0].get_memory_stats as unknown[];
+      const stats = rows[0].get_memory_stats;
       expect(stats).toHaveLength(6); // 6 fields returned from function
     } catch (error) {
       // Skip if function not ready yet - could be various error types

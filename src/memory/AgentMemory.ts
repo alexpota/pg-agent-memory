@@ -23,6 +23,7 @@ import {
 } from '../errors/index.js';
 import { DatabaseMigrator } from '../db/migrations.js';
 import { EmbeddingService } from '../embeddings/EmbeddingService.js';
+import { logger } from '../utils/logger.js';
 
 export class AgentMemory implements AgentMemoryInterface {
   private readonly client: Client;
@@ -57,8 +58,7 @@ export class AgentMemory implements AgentMemoryInterface {
         await this.cleanupExpiredMemories();
       } catch (error) {
         // Ignore cleanup errors during initial setup
-        // eslint-disable-next-line no-console
-        console.warn('Failed to cleanup expired memories:', (error as Error).message);
+        logger.warn('Failed to cleanup expired memories:', (error as Error).message);
       }
     } catch (error) {
       throw new DatabaseConnectionError(error as Error);
@@ -435,8 +435,7 @@ export class AgentMemory implements AgentMemoryInterface {
     try {
       await this.client.query('SELECT cleanup_expired_memories()');
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn('Failed to cleanup expired memories:', error);
+      logger.warn('Failed to cleanup expired memories:', error as Error);
     }
   }
 }
