@@ -175,9 +175,9 @@ export interface DatabaseRow {
   conversation_id: string;
   content: string;
   role: string;
-  metadata: Record<string, unknown> | null;
+  metadata: string | Record<string, unknown> | null; // String from mocks, object from real PostgreSQL
   importance: number;
-  embedding: number[] | null;
+  embedding: string | number[] | null; // String from mocks, array from real PostgreSQL
   created_at: Date;
   expires_at: Date | null;
 }

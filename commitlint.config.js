@@ -18,7 +18,7 @@ export default {
         'revert'    // Reverting changes
       ]
     ],
-    'subject-case': [2, 'always', 'sentence-case'],
+    'subject-case': [0], // Disabled - follow conventional commit standard (lowercase)
     'subject-max-length': [2, 'always', 72],
     'body-max-line-length': [2, 'always', 100]
   }

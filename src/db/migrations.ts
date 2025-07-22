@@ -10,7 +10,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export class DatabaseMigrator {
-  constructor(private readonly client: Client) {}
+  constructor(private readonly client: Client) {
+    if (!client) {
+      throw new Error('Database client is required');
+    }
+  }
 
   async migrate(): Promise<void> {
     try {

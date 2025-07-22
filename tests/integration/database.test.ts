@@ -91,7 +91,8 @@ describe.skipIf(!shouldRunTests)('Database Integration', () => {
     await testClient.query('SELECT cleanup_expired_memories()');
 
     // Should not find expired memory
-    await expect(memory.getHistory('test-conv-2')).rejects.toThrow();
+    const history = await memory.getHistory('test-conv-2');
+    expect(history).toHaveLength(0);
   });
 
   it('should search memories with semantic similarity', async () => {

@@ -188,13 +188,8 @@ export class AgentMemory implements AgentMemoryInterface {
         [this.config.agent, conversation, limit]
       );
 
-      if (rows.length === 0) {
-        throw new ConversationNotFoundError(conversation);
-      }
-
       return rows.map(this.mapRowToMessage);
     } catch (error) {
-      if (error instanceof ConversationNotFoundError) throw error;
       throw new MemoryError(`Failed to get conversation history: ${(error as Error).message}`);
     }
   }
@@ -704,7 +699,9 @@ export class AgentMemory implements AgentMemoryInterface {
         }
       }
 
-      return new Date(expires);
+      // Try to parse as a regular date string
+      const parsed = new Date(expires);
+      return isNaN(parsed.getTime()) ? null : parsed;
     }
 
     return null;
@@ -737,14 +734,35 @@ export class AgentMemory implements AgentMemoryInterface {
   }
 
   private readonly mapRowToMessage = (row: DatabaseRow): Message => {
+    if (!row?.id || !row.content) {
+      throw new Error('Invalid database row: missing required fields');
+    }
+
+    // Handle both string (from mocks) and object (from real PostgreSQL) cases
+    const parseJsonField = (field: string | Record<string, unknown> | number[] | null): unknown => {
+      if (!field) return undefined;
+      if (typeof field === 'string') {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return JSON.parse(field);
+        } catch {
+          return undefined;
+        }
+      }
+      // Already parsed by PostgreSQL driver
+      return field;
+    };
+
     return {
       id: row.id,
       conversation: row.conversation_id,
       content: row.content,
       role: row.role as 'user' | 'assistant' | 'system',
-      metadata: row.metadata ?? undefined,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      metadata: parseJsonField(row.metadata) as Record<string, unknown> | undefined,
       importance: row.importance,
-      embedding: row.embedding ?? undefined,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      embedding: parseJsonField(row.embedding) as number[] | undefined,
       timestamp: row.created_at,
       expires: row.expires_at ?? undefined,
     };

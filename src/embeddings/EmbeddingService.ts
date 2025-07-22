@@ -8,6 +8,7 @@ export class EmbeddingService {
   private static instance: EmbeddingService;
   private embedder: FeatureExtractionPipeline | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
   private readonly modelName = 'Xenova/all-MiniLM-L6-v2'; // 384 dimensions, excellent quality
 
   private constructor() {}
@@ -29,11 +30,23 @@ export class EmbeddingService {
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
+    // Handle concurrent initialization
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this.doInitialize();
+    return this.initializationPromise;
+  }
+
+  private async doInitialize(): Promise<void> {
     try {
       // Download and cache model locally (~23MB for MiniLM-L6-v2)
       this.embedder = await pipeline('feature-extraction', this.modelName);
       this.isInitialized = true;
     } catch (error) {
+      // Reset so next attempt can try again
+      this.initializationPromise = null;
       throw new Error(`Failed to initialize embedding model: ${(error as Error).message}`);
     }
   }
@@ -46,6 +59,10 @@ export class EmbeddingService {
   async generateEmbedding(text: string): Promise<number[]> {
     if (!this.isInitialized || !this.embedder) {
       throw new Error('Embedding service not initialized. Call initialize() first.');
+    }
+
+    if (typeof text !== 'string') {
+      throw new Error('Text must be a string');
     }
 
     if (!text.trim()) {
@@ -146,5 +163,6 @@ export class EmbeddingService {
   cleanup(): void {
     this.embedder = null;
     this.isInitialized = false;
+    this.initializationPromise = null;
   }
 }
