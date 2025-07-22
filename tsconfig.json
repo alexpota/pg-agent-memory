@@ -12,7 +12,7 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": "./",
     "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -29,6 +29,6 @@
     "useDefineForClassFields": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "examples/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }

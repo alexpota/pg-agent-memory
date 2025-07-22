@@ -20,13 +20,19 @@ export class UniversalTokenizer implements UniversalTokenizerInterface {
   private readonly cache = new Map<string, { result: TokenCountResult; timestamp: number }>();
   private readonly defaultStrategy: TokenCountingStrategy;
 
-  // Research-backed token multipliers for different providers
+  // Token multipliers based on official API documentation
+  // Sources:
+  // - OpenAI: ~4 chars/token or 0.75 words/token (official docs)
+  // - Anthropic: ~3.5 chars/token (from official docs)
+  // - DeepSeek: ~3.3 chars/token (0.3 tokens/char from official docs)
+  // - Google: ~4 chars/token (from official docs, same ratio as OpenAI)
+  // - Meta: ~0.75 tokens/word = 1.33 words/token (official Meta docs)
   private readonly providerMultipliers: Record<ModelProvider, number> = {
-    openai: 1.0, // Baseline
-    anthropic: 1.15, // Claude uses ~15% more tokens than OpenAI
-    deepseek: 0.85, // DeepSeek is ~15% more efficient
-    google: 1.1, // Gemini similar to OpenAI, slightly higher
-    meta: 1.25, // Llama tends to use more tokens
+    openai: 1.0, // Baseline: ~4 chars/token (official: "roughly 4 characters or 0.75 words")
+    anthropic: 1.14, // Claude: ~3.5 chars/token = 14% more tokens than OpenAI
+    deepseek: 1.2, // DeepSeek: ~3.3 chars/token = 20% more tokens than OpenAI
+    google: 1.0, // Gemini: ~4 chars/token (same ratio as OpenAI)
+    meta: 0.56, // Llama: ~0.75 tokens/word = 44% fewer tokens than OpenAI (more efficient)
     custom: 1.2, // Conservative estimate for unknown providers
   };
 
@@ -201,8 +207,9 @@ export class UniversalTokenizer implements UniversalTokenizerInterface {
   }
 
   estimateTokens(text: string, provider: string): number {
-    // Universal baseline: ~3.5 characters per token (English average)
-    const baseTokens = Math.ceil(text.length / 3.5);
+    // Updated baseline: ~4 characters per token (OpenAI standard)
+    // This aligns with official documentation from OpenAI and Google
+    const baseTokens = Math.ceil(text.length / 4);
 
     // Apply provider-specific multiplier
     const providerKey = provider as ModelProvider;

@@ -99,11 +99,11 @@ describe('UniversalTokenizer', () => {
       const googleTokens = tokenizer.estimateTokens(text, 'google');
       const metaTokens = tokenizer.estimateTokens(text, 'meta');
 
-      // Verify relative relationships based on multipliers
-      expect(anthropicTokens).toBeGreaterThan(openaiTokens); // 1.15x
-      expect(deepseekTokens).toBeLessThan(openaiTokens); // 0.85x
-      expect(googleTokens).toBeGreaterThan(openaiTokens); // 1.1x
-      expect(metaTokens).toBeGreaterThan(openaiTokens); // 1.25x
+      // Verify relative relationships based on official API documentation
+      expect(anthropicTokens).toBeGreaterThan(openaiTokens); // 1.14x (14% more tokens)
+      expect(deepseekTokens).toBeGreaterThan(openaiTokens); // 1.2x (20% more tokens)
+      expect(googleTokens).toBe(openaiTokens); // 1.0x (same efficiency as OpenAI)
+      expect(metaTokens).toBeLessThan(openaiTokens); // 0.56x (44% fewer tokens - more efficient)
     });
 
     it('should handle unknown providers with custom multiplier', () => {
@@ -382,11 +382,11 @@ describe('UniversalTokenizer', () => {
       expect(anthropicResult.method).toBe('estimation');
       expect(deepseekResult.method).toBe('estimation');
 
-      // Anthropic should have ~15% more tokens than OpenAI
+      // Anthropic should have ~14% more tokens than OpenAI (~3.5 vs 4 chars/token)
       expect(anthropicResult.tokens).toBeGreaterThan(openaiResult.tokens);
 
-      // DeepSeek should have ~15% fewer tokens than OpenAI
-      expect(deepseekResult.tokens).toBeLessThan(openaiResult.tokens);
+      // DeepSeek should have ~20% more tokens than OpenAI (~3.3 vs 4 chars/token)
+      expect(deepseekResult.tokens).toBeGreaterThan(openaiResult.tokens);
     });
   });
 

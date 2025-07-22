@@ -91,5 +91,15 @@ module.exports = {
         'no-console': 'off',
       },
     },
+    // Example files - allow console statements and relaxed type checking
+    {
+      files: ['examples/**/*.ts'],
+      rules: {
+        'no-console': 'off',
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/no-unused-vars': 'warn',
+        '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      },
+    },
   ],
 };
