@@ -54,7 +54,7 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
       const id = await memory.remember({
         conversation: conversationId,
         content: `Memory ${i}: User mentioned preference for ${i % 2 === 0 ? 'coffee' : 'tea'} at ${8 + i}:00 AM`,
-        importance: 0.5 + (i % 3) * 0.2,
+        importance: 0.5 + (i % 3) * 0.15, // Max: 0.5 + 2*0.15 = 0.8
         // Make them old (more than 7 days ago)
         timestamp: timeUtils.daysAgo(8 + i),
       });
@@ -147,11 +147,16 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
     const conversationId = 'compression-test-3';
 
     // Add many memories across different importance levels
-    for (let i = 0; i < 15; i++) {
+    const MEMORY_COUNT = 15;
+    const MIN_IMPORTANCE = 0.2;
+    const IMPORTANCE_STEP = 0.15;
+    const IMPORTANCE_VARIATIONS = 5;
+
+    for (let i = 0; i < MEMORY_COUNT; i++) {
       await memory.remember({
         conversation: conversationId,
         content: `Memory ${i}: Various topics including ${i % 3 === 0 ? 'meetings' : i % 3 === 1 ? 'projects' : 'preferences'}`,
-        importance: 0.2 + (i % 5) * 0.15, // Varied importance: 0.2 to 0.8
+        importance: MIN_IMPORTANCE + (i % IMPORTANCE_VARIATIONS) * IMPORTANCE_STEP,
         timestamp: timeUtils.daysAgo(i + 5),
       });
     }
@@ -219,12 +224,16 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
     // First ensure we have some data and compression has occurred
     const conversationId = 'compression-test-5';
 
-    // Add memories
-    for (let i = 0; i < 8; i++) {
+    // Add memories with varying importance levels
+    const MEMORY_COUNT = 8;
+    const BASE_IMPORTANCE = 0.4;
+    const IMPORTANCE_INCREMENT = 0.07; // Ensures max importance stays under 1.0
+
+    for (let i = 0; i < MEMORY_COUNT; i++) {
       await memory.remember({
         conversation: conversationId,
         content: `Test memory ${i} with substantial content for compression testing`,
-        importance: 0.4 + i * 0.1,
+        importance: BASE_IMPORTANCE + i * IMPORTANCE_INCREMENT,
         timestamp: timeUtils.daysAgo(i + 15),
       });
     }

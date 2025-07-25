@@ -114,7 +114,7 @@ export class CompressionService {
       const actualCompressionRatio = tokenCount / originalTokenCount;
 
       const summary: MemorySummary = {
-        id: `summary_${ulid()}`,
+        id: `sum_${ulid()}`,
         agentId,
         conversationId:
           // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
