@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { performance } from 'perf_hooks';
 import { ulid } from 'ulid';
 import {
   MemoryConfig,
@@ -26,6 +27,7 @@ import {
   MemoryNotFoundError,
   ConversationNotFoundError,
   TokenLimitExceededError,
+  ValidationError,
 } from '../errors/index.js';
 import { DatabaseMigrator } from '../db/migrations.js';
 import { EmbeddingService } from '../embeddings/EmbeddingService.js';
@@ -43,6 +45,10 @@ export class AgentMemory implements AgentMemoryInterface {
 
   constructor(config: Partial<MemoryConfig>) {
     this.config = MemoryConfigSchema.parse(config);
+
+    // Validate connection string
+    this.validateConnectionString(this.config.connectionString);
+
     this.client = new Client({ connectionString: this.config.connectionString });
     this.compressionService = new CompressionService();
 
@@ -54,6 +60,17 @@ export class AgentMemory implements AgentMemoryInterface {
       providersCount: this.config.modelProviders?.length ?? 0,
       tokenStrategy: this.config.tokenCountingStrategy,
     });
+  }
+
+  /**
+   * Creates and initializes a new AgentMemory instance
+   * @param config Memory configuration
+   * @returns Promise resolving to initialized AgentMemory instance
+   */
+  static async create(config: Partial<MemoryConfig>): Promise<AgentMemory> {
+    const memory = new AgentMemory(config);
+    await memory.initialize();
+    return memory;
   }
 
   async initialize(): Promise<void> {
@@ -91,7 +108,53 @@ export class AgentMemory implements AgentMemoryInterface {
     }
   }
 
+  /**
+   * Performs health check on AgentMemory instance
+   * @returns Promise resolving to health status with details
+   */
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    details: Record<string, unknown>;
+  }> {
+    try {
+      // Test database connection
+      await this.client.query('SELECT 1');
+
+      // Test embedding service
+      await this.embeddingService.generateEmbedding('test');
+
+      // Test memory count
+      const result = await this.client.query(
+        `SELECT COUNT(*) as count FROM ${this.config.tablePrefix}_memories WHERE agent_id = $1`,
+        [this.config.agent]
+      );
+
+      const memoryCount = parseInt((result.rows[0] as { count: string }).count);
+
+      return {
+        status: 'healthy',
+        details: {
+          database: 'connected',
+          embeddings: 'ready',
+          memoryCount,
+          agent: this.config.agent,
+          connected: this.isConnected,
+        },
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        details: {
+          error: (error as Error).message,
+          agent: this.config.agent,
+          connected: this.isConnected,
+        },
+      };
+    }
+  }
+
   async remember(message: Message): Promise<string> {
+    const startTime = performance.now();
     const validatedMessage = MessageSchema.parse(message);
     this.ensureConnected();
 
@@ -105,9 +168,12 @@ export class AgentMemory implements AgentMemoryInterface {
     const expiresAt = this.parseExpiration(validatedMessage.expires);
 
     // Generate embedding for semantic search
+    const embeddingStartTime = performance.now();
     const embedding = await this.embeddingService.generateEmbedding(validatedMessage.content);
+    const embeddingDuration = performance.now() - embeddingStartTime;
 
     try {
+      const dbStartTime = performance.now();
       await this.client.query(
         `
         INSERT INTO ${this.config.tablePrefix}_memories (
@@ -128,9 +194,30 @@ export class AgentMemory implements AgentMemoryInterface {
           expiresAt,
         ]
       );
+      const dbDuration = performance.now() - dbStartTime;
+
+      const totalDuration = performance.now() - startTime;
+
+      logger.info(`Memory stored successfully`, {
+        memoryId: id,
+        agent: this.config.agent,
+        conversation: validatedMessage.conversation,
+        contentLength: validatedMessage.content.length,
+        tokenCount,
+        performance: {
+          total: `${totalDuration.toFixed(2)}ms`,
+          embedding: `${embeddingDuration.toFixed(2)}ms`,
+          database: `${dbDuration.toFixed(2)}ms`,
+        },
+      });
 
       return id;
     } catch (error) {
+      const totalDuration = performance.now() - startTime;
+      logger.error(
+        `Failed to store memory after ${totalDuration}ms: ${(error as Error).message}`,
+        error as Error
+      );
       throw new MemoryError(`Failed to save memory: ${(error as Error).message}`);
     }
   }
@@ -340,6 +427,56 @@ export class AgentMemory implements AgentMemoryInterface {
     }
   }
 
+  /**
+   * Finds memories related to a specific memory using vector similarity
+   * @param memoryId ID of the memory to find relations for
+   * @param limit Maximum number of related memories to return
+   * @returns Promise resolving to array of related memories
+   */
+  async findRelatedMemories(memoryId: string, limit = 5): Promise<Message[]> {
+    this.ensureConnected();
+
+    try {
+      // First get the target memory's embedding
+      const { rows: targetRows } = await this.client.query<DatabaseRow>(
+        `
+        SELECT embedding FROM ${this.config.tablePrefix}_memories
+        WHERE id = $1 AND agent_id = $2
+      `,
+        [memoryId, this.config.agent]
+      );
+
+      if (targetRows.length === 0) {
+        throw new MemoryNotFoundError(memoryId);
+      }
+
+      const targetEmbedding = targetRows[0]!.embedding;
+
+      // Find similar memories using vector distance
+      const { rows } = await this.client.query<DatabaseRow>(
+        `
+        SELECT 
+          id, agent_id, conversation_id, content, role, metadata,
+          importance, embedding, created_at, expires_at,
+          (embedding::vector <=> $3::vector) as similarity_score
+        FROM ${this.config.tablePrefix}_memories
+        WHERE agent_id = $1 AND id != $2 AND embedding IS NOT NULL
+        AND (embedding::vector <=> $3::vector) < 0.4
+        ORDER BY (embedding::vector <=> $3::vector) ASC, importance DESC
+        LIMIT $4
+      `,
+        [this.config.agent, memoryId, targetEmbedding, limit]
+      );
+
+      return rows.map(this.mapRowToMessage);
+    } catch (error) {
+      if (error instanceof MemoryNotFoundError) {
+        throw error;
+      }
+      throw new MemoryError(`Failed to find related memories: ${(error as Error).message}`);
+    }
+  }
+
   getMemoryGraph(_conversation?: string): Promise<KnowledgeGraph> {
     return Promise.reject(new MemoryError('Memory graph not yet implemented'));
   }
@@ -519,7 +656,7 @@ export class AgentMemory implements AgentMemoryInterface {
       let totalCompressedMemories = 0;
       let totalSummariesCreated = 0;
       let totalTokensReclaimed = 0;
-      const startTime = Date.now();
+      const startTime = performance.now();
 
       // Compress each conversation group
       for (const [conversationId, memories] of conversationGroups) {
@@ -544,7 +681,7 @@ export class AgentMemory implements AgentMemoryInterface {
         totalTokensReclaimed += summary.originalTokenCount - summary.tokenCount;
       }
 
-      const processingTimeMs = Date.now() - startTime;
+      const processingTimeMs = performance.now() - startTime;
 
       const result: CompressionResult = {
         agentId: this.config.agent,
@@ -656,6 +793,42 @@ export class AgentMemory implements AgentMemoryInterface {
       };
     } catch (error) {
       throw new MemoryError(`Failed to get compression stats: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Validates PostgreSQL connection string format and provides helpful warnings
+   * @param connectionString The connection string to validate
+   */
+  private validateConnectionString(connectionString: string): void {
+    if (!connectionString) {
+      throw new ValidationError(
+        'connectionString',
+        connectionString,
+        'Connection string is required'
+      );
+    }
+
+    if (
+      !connectionString.startsWith('postgresql://') &&
+      !connectionString.startsWith('postgres://')
+    ) {
+      throw new ValidationError(
+        'connectionString',
+        connectionString,
+        'Connection string must be a PostgreSQL URL (postgresql://... or postgres://...)'
+      );
+    }
+
+    // Warn about common issues
+    if (connectionString.includes('localhost') && !connectionString.includes(':5432')) {
+      logger.warn(
+        'Using localhost without explicit port - ensure PostgreSQL is running on default port 5432'
+      );
+    }
+
+    if (!connectionString.includes('sslmode') && connectionString.includes('amazonaws.com')) {
+      logger.warn('AWS RDS connection detected - consider adding sslmode=require for security');
     }
   }
 

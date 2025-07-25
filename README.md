@@ -17,20 +17,17 @@
 <td width="50%">
 
 **❌ Without pg-agent-memory**
+
 ```js
 // Day 1: User shares preference
 await openai.chat.completions.create({
-  messages: [
-    { role: "user", content: "I prefer Python" }
-  ]
+  messages: [{ role: 'user', content: 'I prefer Python' }],
 });
 // AI: "Got it! I'll remember that."
 
 // Day 2: User asks for help
 await openai.chat.completions.create({
-  messages: [
-    { role: "user", content: "Help me start a project" }
-  ]
+  messages: [{ role: 'user', content: 'Help me start a project' }],
 });
 // AI: "What language would you like to use?"
 // 😤 Forgot everything!
@@ -40,21 +37,19 @@ await openai.chat.completions.create({
 <td width="50%">
 
 **✅ With pg-agent-memory**
+
 ```js
 // Day 1: Store preference
 await memory.remember({
   conversation: userId,
-  content: "User prefers Python",
-  role: "system"
+  content: 'User prefers Python',
+  role: 'system',
 });
 
 // Day 2: Retrieve context
 const context = await memory.getHistory(userId);
 await openai.chat.completions.create({
-  messages: [
-    ...context,
-    { role: "user", content: "Help me start a project" }
-  ]
+  messages: [...context, { role: 'user', content: 'Help me start a project' }],
 });
 // AI: "I'll create a Python project for you!"
 // 🎯 Remembers everything!
@@ -78,6 +73,7 @@ await openai.chat.completions.create({
 - **High Performance** - <5ms memory operations, <20ms vector search
 
 ### Coming Soon
+
 - Multi-agent memory sharing
 - Memory graph visualization
 - Pattern detection
@@ -104,12 +100,14 @@ npm install pg-agent-memory
 ### Database Setup
 
 **Option 1: Docker (Recommended)**
+
 ```bash
 # Use included docker-compose.yml
 docker-compose up -d
 ```
 
 **Option 2: Existing PostgreSQL**
+
 ```sql
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -120,20 +118,28 @@ CREATE EXTENSION IF NOT EXISTS vector;
 ```typescript
 import { AgentMemory } from 'pg-agent-memory';
 
-const memory = new AgentMemory({
+// Option 1: Static factory method (recommended)
+const memory = await AgentMemory.create({
   agent: 'my-assistant',
-  connectionString: 'postgresql://user:pass@localhost:5432/db'
+  connectionString: 'postgresql://user:pass@localhost:5432/db',
 });
 
-// Initialize (downloads embedding model on first run)
+// Option 2: Traditional constructor + initialize
+const memory = new AgentMemory({
+  agent: 'my-assistant',
+  connectionString: 'postgresql://user:pass@localhost:5432/db',
+});
 await memory.initialize();
 
 // Store conversation memory
 const memoryId = await memory.remember({
   conversation: 'user-123',
   content: 'User prefers email notifications',
-  importance: 0.8
+  importance: 0.8,
 });
+
+// Find related memories using vector similarity
+const related = await memory.findRelatedMemories(memoryId, 5);
 
 // Semantic search across memories
 const relevant = await memory.searchMemories('notification preferences');
@@ -141,12 +147,16 @@ const relevant = await memory.searchMemories('notification preferences');
 // Get relevant context for a query
 const context = await memory.getRelevantContext(
   'user-123',
-  'user communication preferences', 
+  'user communication preferences',
   1000 // max tokens
 );
 
 console.log(`Found ${context.messages.length} relevant memories`);
 console.log(`Relevance score: ${context.relevanceScore}`);
+
+// Health check for monitoring
+const health = await memory.healthCheck();
+console.log(`Status: ${health.status}, Memories: ${health.details.memoryCount}`);
 
 // Cleanup
 await memory.disconnect();
@@ -165,7 +175,7 @@ const memory = new AgentMemory({
       name: 'gpt-4o',
       provider: 'openai',
       model: 'gpt-4o',
-      tokenLimits: { context: 128000, output: 4000 }
+      tokenLimits: { context: 128000, output: 4000 },
       // Automatic prompt caching: Up to 75% cost savings + 80% latency reduction
       // Cache hits for prompts 1024+ tokens with exact prefix matches
     },
@@ -173,33 +183,33 @@ const memory = new AgentMemory({
       name: 'claude-sonnet',
       provider: 'anthropic',
       model: 'claude-sonnet-4-20250514',
-      tokenLimits: { context: 200000, output: 4000 }
+      tokenLimits: { context: 200000, output: 4000 },
       // Context caching available: 90% cost savings on repeated prompts
     },
     {
       name: 'deepseek-coder',
-      provider: 'deepseek', 
+      provider: 'deepseek',
       model: 'deepseek-coder',
-      tokenLimits: { context: 32000, output: 4000 }
+      tokenLimits: { context: 32000, output: 4000 },
       // KV cache available: ~90% cost reduction
     },
     {
       name: 'gemini-pro',
       provider: 'google',
       model: 'gemini-1.5-pro',
-      tokenLimits: { context: 1048576, output: 8192 }
+      tokenLimits: { context: 1048576, output: 8192 },
       // Context caching available: Significant cost reduction
     },
     {
       name: 'llama-3',
       provider: 'meta',
       model: 'llama-3.1-70b',
-      tokenLimits: { context: 128000, output: 4000 }
+      tokenLimits: { context: 128000, output: 4000 },
       // More efficient tokenizer: ~44% fewer tokens than OpenAI
-    }
+    },
   ],
   defaultProvider: 'gpt-4o',
-  tokenCountingStrategy: 'hybrid' // 'precise', 'fast', or 'hybrid'
+  tokenCountingStrategy: 'hybrid', // 'precise', 'fast', or 'hybrid'
 });
 
 // Token counting uses official provider documentation:
@@ -211,7 +221,7 @@ const memory = new AgentMemory({
 await memory.remember({
   conversation: userId,
   content: longText,
-  provider: 'gpt-4o' // Automatic prompt caching for repeated content
+  provider: 'gpt-4o', // Automatic prompt caching for repeated content
 });
 ```
 
@@ -224,7 +234,7 @@ Automatic memory compression with multiple strategies:
 const compressionResult = await memory.compressMemories({
   strategy: 'hybrid', // 'token_based', 'time_based', 'importance_based', 'hybrid'
   maxAge: '7d',
-  targetCompressionRatio: 0.6
+  targetCompressionRatio: 0.6,
 });
 
 console.log(`Compressed ${compressionResult.memoriesCompressed} memories`);
@@ -240,12 +250,13 @@ const context = await memory.getRelevantContextWithCompression(
 ## Real-World Integration
 
 ### With OpenAI
+
 ```typescript
 import OpenAI from 'openai';
 import { AgentMemory } from 'pg-agent-memory';
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 const memory = new AgentMemory({ agent: 'support-bot', connectionString });
@@ -258,42 +269,45 @@ const completion = await client.chat.completions.create({
   model: 'gpt-4o',
   messages: [
     ...history.map(m => ({ role: m.role, content: m.content })),
-    { role: 'user', content: userMessage }
-  ]
+    { role: 'user', content: userMessage },
+  ],
 });
 
 // Store the interaction
 await memory.remember({
   conversation: userId,
   content: userMessage,
-  role: 'user'
+  role: 'user',
 });
 
 await memory.remember({
   conversation: userId,
   content: completion.choices[0].message.content,
-  role: 'assistant'
+  role: 'assistant',
 });
 ```
 
 ### With Anthropic Claude
+
 ```typescript
 import Anthropic from '@anthropic-ai/sdk';
 import { AgentMemory } from 'pg-agent-memory';
 
 const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const memory = new AgentMemory({ 
-  agent: 'claude-assistant', 
+const memory = new AgentMemory({
+  agent: 'claude-assistant',
   connectionString,
-  modelProviders: [{
-    name: 'claude',
-    provider: 'anthropic',
-    model: 'claude-sonnet-4-20250514',
-    tokenLimits: { context: 200000, output: 4000 }
-  }]
+  modelProviders: [
+    {
+      name: 'claude',
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-20250514',
+      tokenLimits: { context: 200000, output: 4000 },
+    },
+  ],
 });
 
 // Get conversation with compression for large contexts
@@ -307,19 +321,20 @@ const message = await client.messages.create({
   max_tokens: 1024,
   messages: [
     ...context.messages.map(m => ({ role: m.role, content: m.content })),
-    { role: 'user', content: userMessage }
-  ]
+    { role: 'user', content: userMessage },
+  ],
 });
 
 // Store the interaction
 await memory.remember({
   conversation: userId,
   content: message.content[0].text,
-  role: 'assistant'
+  role: 'assistant',
 });
 ```
 
 ### With Vercel AI SDK
+
 ```typescript
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
@@ -329,24 +344,24 @@ const memory = new AgentMemory({ agent: 'chat-assistant', connectionString });
 
 export async function POST(req: Request) {
   const { messages, userId } = await req.json();
-  
+
   // Get user's conversation history
   const history = await memory.getHistory(userId);
-  
+
   const result = streamText({
     model: openai('gpt-4o'),
     system: 'You are a helpful assistant with memory.',
     messages: [...history, ...messages],
   });
-  
+
   // Store the conversation
   for (const message of messages) {
     await memory.remember({
       conversation: userId,
-      ...message
+      ...message,
     });
   }
-  
+
   return result.toDataStreamResponse();
 }
 ```
@@ -355,6 +370,19 @@ export async function POST(req: Request) {
 
 ### AgentMemory
 
+#### Static Methods
+
+##### `AgentMemory.create(config: MemoryConfig): Promise<AgentMemory>`
+
+**Recommended**: Creates and initializes an AgentMemory instance in one call.
+
+```typescript
+const memory = await AgentMemory.create({
+  agent: 'my-bot',
+  connectionString: 'postgresql://...',
+});
+```
+
 #### Constructor
 
 ```typescript
@@ -362,21 +390,42 @@ new AgentMemory(config: MemoryConfig)
 ```
 
 **MemoryConfig:**
+
 - `agent: string` - Unique agent identifier
-- `connectionString: string` - PostgreSQL connection string  
+- `connectionString: string` - PostgreSQL connection string
 - `tablePrefix?: string` - Table prefix (default: 'agent')
 - `maxTokens?: number` - Max tokens per memory (default: 4000)
 - `embeddingDimensions?: number` - Vector dimensions (default: 384)
 
-#### Methods
+#### Core Methods
 
 ##### `initialize(): Promise<void>`
+
 Initialize database schema and embedding model.
 
 ##### `remember(message: Message): Promise<string>`
+
 Store a conversation memory.
 
+##### `findRelatedMemories(memoryId: string, limit?: number): Promise<Message[]>`
+
+Find memories related to a specific memory using vector similarity.
+
+```typescript
+const related = await memory.findRelatedMemories(memoryId, 5);
+```
+
+##### `healthCheck(): Promise<HealthStatus>`
+
+Check system health for monitoring and debugging.
+
+```typescript
+const health = await memory.healthCheck();
+// Returns: { status: 'healthy' | 'unhealthy', details: {...} }
+```
+
 **Message:**
+
 ```typescript
 {
   conversation: string;    // Conversation ID
@@ -389,21 +438,27 @@ Store a conversation memory.
 ```
 
 ##### `recall(filter: MemoryFilter): Promise<Context>`
+
 Retrieve memories with filtering.
 
 ##### `getHistory(conversation: string, limit?: number): Promise<Message[]>`
+
 Get chronological conversation history.
 
 ##### `getRelevantContext(conversation: string, query: string, maxTokens: number): Promise<Context>`
+
 Find semantically relevant memories for a query.
 
 ##### `searchMemories(query: string, filters?: MemoryFilter): Promise<Message[]>`
+
 Semantic search across all agent memories.
 
 ##### `deleteMemory(memoryId: string): Promise<void>`
+
 Delete specific memory.
 
 ##### `deleteConversation(conversation: string): Promise<void>`
+
 Delete entire conversation.
 
 ## Examples
@@ -419,7 +474,7 @@ class ChatBot {
   constructor() {
     this.memory = new AgentMemory({
       agent: 'chatbot',
-      connectionString: process.env.DATABASE_URL
+      connectionString: process.env.DATABASE_URL,
     });
   }
 
@@ -428,24 +483,20 @@ class ChatBot {
     await this.memory.remember({
       conversation: userId,
       content: message,
-      role: 'user'
+      role: 'user',
     });
 
     // Get relevant context
-    const context = await this.memory.getRelevantContext(
-      userId, 
-      message, 
-      800
-    );
+    const context = await this.memory.getRelevantContext(userId, message, 800);
 
     // Generate response using context
     const response = await this.generateResponse(message, context);
 
-    // Store bot response  
+    // Store bot response
     await this.memory.remember({
       conversation: userId,
       content: response,
-      role: 'assistant'
+      role: 'assistant',
     });
 
     return response;
@@ -459,19 +510,19 @@ class ChatBot {
 // Search with filters
 const memories = await memory.searchMemories('user preferences', {
   importance: { min: 0.7 },
-  dateRange: { 
+  dateRange: {
     start: new Date('2024-01-01'),
-    end: new Date('2024-12-31')
+    end: new Date('2024-12-31'),
   },
   metadata: { category: 'user_settings' },
-  limit: 10
+  limit: 10,
 });
 
 // Get memories by role
 const userMessages = await memory.recall({
   conversation: 'user-123',
   role: 'user',
-  limit: 50
+  limit: 50,
 });
 ```
 
@@ -484,7 +535,7 @@ export DATABASE_URL="postgresql://user:pass@localhost:5432/dbname"
 # Run basic example
 npm run example:basic
 
-# Run chatbot example  
+# Run chatbot example
 npm run example:chatbot
 
 # Run all examples
@@ -574,7 +625,7 @@ npm run test:all
 ### Performance
 
 - **Memory operations**: <5ms p99
-- **Vector search**: <20ms p99  
+- **Vector search**: <20ms p99
 - **Embedding generation**: ~10ms local
 - **Model size**: ~23MB (cached after first download)
 - **Token counting**: Sub-millisecond estimation, based on official provider ratios
@@ -596,6 +647,7 @@ npm run test:all
 ```
 
 **Components:**
+
 - **AgentMemory**: Main API for memory operations
 - **EmbeddingService**: Local text-to-vector conversion using @xenova/transformers
 - **PostgreSQL**: Persistent storage with ACID properties
@@ -604,7 +656,7 @@ npm run test:all
 
 ## License
 
-MIT
+[MIT](./LICENSE) © Alex Potapenko
 
 ## Contributing
 
