@@ -17,9 +17,26 @@ export class DatabaseMigrator {
   }
 
   async migrate(): Promise<void> {
+    // Use advisory lock to serialize entire migration process across all concurrent processes
+    const MIGRATION_LOCK_ID = 123456789; // Consistent lock ID for migrations
+
     try {
-      await this.runMigrations();
+      // Acquire advisory lock - only one process can migrate at a time
+      await this.client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
+
+      try {
+        await this.runMigrations();
+      } finally {
+        // Always release the advisory lock
+        await this.client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+      }
     } catch (error) {
+      // Ensure lock is released even on error
+      try {
+        await this.client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+      } catch {
+        // Ignore unlock errors
+      }
       throw new DatabaseConnectionError(error as Error);
     }
   }
