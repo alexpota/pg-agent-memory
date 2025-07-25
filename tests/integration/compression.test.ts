@@ -177,12 +177,14 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
 
       // Add memories within specific time window
       for (let i = 0; i < 5; i++) {
+        const hour = 9 + i;
+        const hourString = hour.toString().padStart(2, '0');
         await testSetup.memory.remember({
           conversation: conversationId,
           content: `Morning meeting discussion ${i}: Planning and coordination topics`,
           importance: 0.7,
           role: 'user',
-          timestamp: new Date(`2024-01-15T${9 + i}:00:00Z`),
+          timestamp: new Date(`2024-01-15T${hourString}:00:00Z`),
         });
       }
 
@@ -227,13 +229,18 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
       const conversationId = 'compression-test-6';
 
       // Add only recent memories
-      await testSetup.memory.remember({
+      const memoryId = await testSetup.memory.remember({
         conversation: conversationId,
         content: 'Very recent memory',
         importance: 0.9,
         role: 'user',
         timestamp: new Date(),
       });
+
+      // Verify the memory was stored
+      const history = await testSetup.memory.getHistory(conversationId);
+      expect(history.length).toBe(1);
+      expect(history[0]?.id).toBe(memoryId);
 
       const result = await testSetup.memory.compressMemories({
         strategy: 'time_based',

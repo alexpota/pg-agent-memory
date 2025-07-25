@@ -6,6 +6,15 @@ npm run type-check
 echo "✨ Running lint-staged..."
 npx lint-staged
 
-# Run unit tests only (skip integration tests that need PostgreSQL)
+# Run unit tests (always)
 echo "🧪 Running unit tests..."
 npm run test
+
+# Run integration tests if DATABASE_URL is available
+if [ ! -z "$DATABASE_URL" ]; then
+  echo "🔗 DATABASE_URL detected, running integration tests..."
+  npm run test:integration
+else
+  echo "⚠️  No DATABASE_URL - skipping integration tests (may fail in CI)"
+  echo "   Set DATABASE_URL to catch integration issues locally"
+fi
