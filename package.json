@@ -76,7 +76,8 @@
     "start": "npm run example",
     "prepare": "husky",
     "prepublishOnly": "npm run clean && npm run build && npm test && npm run lint",
-    "commit": "cz"
+    "commit": "cz",
+    "release": "semantic-release"
   },
   "config": {
     "commitizen": {
@@ -106,6 +107,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "@semantic-release/changelog": "^6.0.3",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.15.4",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
@@ -123,6 +125,7 @@
     "pg": "^8.16.3",
     "pgvector": "^0.2.1",
     "prettier": "^3.0.0",
+    "semantic-release": "^24.2.7",
     "tsup": "^8.0.0",
     "tsx": "^4.20.3",
     "typedoc": "^0.25.0",
