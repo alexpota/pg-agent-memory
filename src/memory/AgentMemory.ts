@@ -744,10 +744,12 @@ export class AgentMemory implements AgentMemoryInterface {
         conversation
       );
 
-      // Update time window with label if provided
-      if (timeWindow.label) {
-        summary.timeWindow.label = timeWindow.label;
-      }
+      // Override time window with the requested time window (not calculated from memories)
+      summary.timeWindow = {
+        start: timeWindow.start,
+        end: timeWindow.end,
+        label: timeWindow.label,
+      };
 
       return summary;
     } catch (error) {
@@ -760,13 +762,13 @@ export class AgentMemory implements AgentMemoryInterface {
 
     try {
       const { rows } = await this.client.query<{
-        total_memories: string;
-        raw_memories: string;
-        compressed_memories: string;
-        summaries: string;
-        total_tokens: string;
-        raw_tokens: string;
-        compressed_tokens: string;
+        total_memories: number;
+        raw_memories: number;
+        compressed_memories: number;
+        summaries: number;
+        total_tokens: number;
+        raw_tokens: number;
+        compressed_tokens: number;
         compression_ratio: number;
         storage_efficiency: number;
         last_compression_at: Date | null;
@@ -780,13 +782,13 @@ export class AgentMemory implements AgentMemoryInterface {
 
       return {
         agentId: this.config.agent,
-        totalMemories: parseInt(stats.total_memories, 10),
-        rawMemories: parseInt(stats.raw_memories, 10),
-        compressedMemories: parseInt(stats.compressed_memories, 10),
-        summaries: parseInt(stats.summaries, 10),
-        totalTokens: parseInt(stats.total_tokens, 10),
-        rawTokens: parseInt(stats.raw_tokens, 10),
-        compressedTokens: parseInt(stats.compressed_tokens, 10),
+        totalMemories: stats.total_memories,
+        rawMemories: stats.raw_memories,
+        compressedMemories: stats.compressed_memories,
+        summaries: stats.summaries,
+        totalTokens: stats.total_tokens,
+        rawTokens: stats.raw_tokens,
+        compressedTokens: stats.compressed_tokens,
         compressionRatio: stats.compression_ratio,
         storageEfficiency: stats.storage_efficiency,
         lastCompressionAt: stats.last_compression_at ?? undefined,

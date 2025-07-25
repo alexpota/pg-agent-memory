@@ -9,7 +9,8 @@
   "include": [
     "tests/**/*",
     "src/**/*.test.ts",
-    "src/**/*.spec.ts"
+    "src/**/*.spec.ts",
+    "vitest.config.ts"
   ],
   "exclude": [
     "node_modules",

@@ -613,9 +613,9 @@ describe('AgentMemory', () => {
       const summary = await memory.summarizeConversationWindow('conv-123', timeWindow);
 
       expect(summary.conversationId).toBe('conv-123');
-      // The compression service calculates time window based on actual memory timestamps
-      expect(summary.timeWindow.start.getTime()).toBe(memoryTimestamp.getTime());
-      expect(summary.timeWindow.end.getTime()).toBe(memoryTimestamp.getTime());
+      // The time window should be preserved from the requested time window
+      expect(summary.timeWindow.start.getTime()).toBe(timeWindow.start.getTime());
+      expect(summary.timeWindow.end.getTime()).toBe(timeWindow.end.getTime());
     });
 
     it('should throw error for empty time window', async () => {

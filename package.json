@@ -73,6 +73,7 @@
     "docs": "typedoc src/index.ts",
     "example": "npm run build && node examples/quick-start.js",
     "example:basic": "npm run build && node examples/basic-usage.js",
+    "benchmark": "npm run build && node scripts/benchmark.js",
     "start": "npm run example",
     "prepare": "husky",
     "prepublishOnly": "npm run clean && npm run build && npm test && npm run lint",

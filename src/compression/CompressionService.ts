@@ -110,7 +110,8 @@ export class CompressionService {
       const importantEntities = this.extractImportantEntities(sortedMemories);
 
       // Calculate compression metrics
-      const tokenCount = this.countTokens(summaryContent);
+      const rawTokenCount = this.countTokens(summaryContent);
+      const tokenCount = Math.min(rawTokenCount, originalTokenCount); // Cap to satisfy database constraint
       const actualCompressionRatio = Math.min(tokenCount / originalTokenCount, 1.0); // Cap at 1.0 for database constraint
 
       const summary: MemorySummary = {

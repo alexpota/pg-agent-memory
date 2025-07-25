@@ -1,50 +1,18 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client } from 'pg';
-import { AgentMemory, EmbeddingService } from '../../src/index.js';
+import { setupIntegrationTest, type TestSetup } from './helpers/testSetup.js';
+import { EmbeddingService } from '../../src/index.js';
 
-// Skip integration tests if no database URL provided
-const DATABASE_URL = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
-const shouldRunTests =
-  DATABASE_URL &&
-  DATABASE_URL !== 'postgresql://test:test@localhost:5432/test' &&
-  !DATABASE_URL.includes('fake') &&
-  !DATABASE_URL.includes('example');
-
-describe.skipIf(!shouldRunTests)('Vector Operations Integration', () => {
-  let memory: AgentMemory;
-  let testClient: Client;
+describe.skipIf(!process.env.DATABASE_URL)('Vector Operations Integration', () => {
+  let testSetup: TestSetup;
   let embeddingService: EmbeddingService;
 
   beforeAll(async () => {
-    if (!DATABASE_URL) return;
-
-    // Setup test database
-    testClient = new Client({ connectionString: DATABASE_URL });
-    await testClient.connect();
-
-    // Initialize memory system
-    memory = new AgentMemory({
-      agent: 'test-vector-agent',
-      connectionString: DATABASE_URL,
-    });
-
-    await memory.initialize();
-
+    testSetup = await setupIntegrationTest('test-vector-agent');
     embeddingService = EmbeddingService.getInstance();
   }, 30000); // Allow 30s for model download
 
   afterAll(async () => {
-    if (memory) {
-      await memory.disconnect();
-    }
-    if (testClient) {
-      // Clean up test data
-      await testClient.query('DROP TABLE IF EXISTS agent_memories CASCADE');
-      await testClient.query('DROP TABLE IF EXISTS agent_memory_shares CASCADE');
-      await testClient.query('DROP TABLE IF EXISTS agent_memory_summaries CASCADE');
-      await testClient.query('DROP TABLE IF EXISTS schema_migrations CASCADE');
-      await testClient.end();
-    }
+    await testSetup.cleanup();
     if (embeddingService) {
       embeddingService.cleanup();
     }
@@ -78,14 +46,14 @@ describe.skipIf(!shouldRunTests)('Vector Operations Integration', () => {
   });
 
   it('should store and retrieve memories with embeddings', async () => {
-    const memoryId = await memory.remember({
+    const memoryId = await testSetup.memory.remember({
       conversation: 'test-embeddings-1',
       content: 'User loves Italian pasta dishes',
       importance: 0.9,
     });
 
     // Verify memory is stored with embedding
-    const { rows } = await testClient.query(
+    const { rows } = await testSetup.testClient.query(
       'SELECT content, embedding FROM agent_memories WHERE id = $1',
       [memoryId]
     );
@@ -101,23 +69,23 @@ describe.skipIf(!shouldRunTests)('Vector Operations Integration', () => {
 
   it('should perform semantic search across memories', async () => {
     // Store related memories
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-embeddings-2',
       content: 'User enjoys eating spaghetti carbonara',
     });
 
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-embeddings-2',
       content: 'Weather forecast shows rain tomorrow',
     });
 
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-embeddings-2',
       content: 'Italian restaurants serve excellent pasta',
     });
 
     // Search for pasta-related content
-    const results = await memory.searchMemories('pasta dishes');
+    const results = await testSetup.memory.searchMemories('pasta dishes');
 
     // Should find pasta-related memories, not weather
     expect(results.length).toBeGreaterThan(0);
@@ -136,26 +104,26 @@ describe.skipIf(!shouldRunTests)('Vector Operations Integration', () => {
   });
 
   it('should retrieve relevant context using semantic similarity', async () => {
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-context-1',
       content: 'User has dietary restrictions - vegetarian',
       importance: 0.8,
     });
 
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-context-1',
       content: 'User mentioned loving pizza margherita',
       importance: 0.7,
     });
 
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-context-1',
       content: 'Discussion about weekend weather plans',
       importance: 0.3,
     });
 
     // Query for food-related context
-    const context = await memory.getRelevantContext(
+    const context = await testSetup.memory.getRelevantContext(
       'test-context-1',
       'food preferences and dietary needs',
       1000

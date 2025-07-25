@@ -1,52 +1,20 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client } from 'pg';
-import { AgentMemory } from '../../src/index.js';
+import { setupIntegrationTest, type TestSetup } from './helpers/testSetup.js';
 
-// Skip integration tests if no database URL provided
-const DATABASE_URL = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
-const shouldRunTests =
-  DATABASE_URL &&
-  DATABASE_URL !== 'postgresql://test:test@localhost:5432/test' &&
-  !DATABASE_URL.includes('fake') &&
-  !DATABASE_URL.includes('example');
-
-describe.skipIf(!shouldRunTests)('Database Integration', () => {
-  let memory: AgentMemory;
-  let testClient: Client;
+describe.skipIf(!process.env.DATABASE_URL)('Database Integration', () => {
+  let testSetup: TestSetup;
 
   beforeAll(async () => {
-    if (!DATABASE_URL) return;
-
-    // Setup test database
-    testClient = new Client({ connectionString: DATABASE_URL });
-    await testClient.connect();
-
-    // Initialize memory system
-    memory = new AgentMemory({
-      agent: 'test-agent',
-      connectionString: DATABASE_URL,
-    });
-
-    await memory.initialize();
+    testSetup = await setupIntegrationTest('test-agent');
   });
 
   afterAll(async () => {
-    if (memory) {
-      await memory.disconnect();
-    }
-    if (testClient) {
-      // Clean up test data
-      await testClient.query('DROP TABLE IF EXISTS agent_memories CASCADE');
-      await testClient.query('DROP TABLE IF EXISTS agent_memory_shares CASCADE');
-      await testClient.query('DROP TABLE IF EXISTS agent_memory_summaries CASCADE');
-      await testClient.query('DROP TABLE IF EXISTS schema_migrations CASCADE');
-      await testClient.end();
-    }
+    await testSetup.cleanup();
   });
 
   it('should create database schema successfully', async () => {
     // Check if tables exist
-    const { rows } = await testClient.query(`
+    const { rows } = await testSetup.testClient.query(`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_name IN ('agent_memories', 'agent_memory_shares', 'agent_memory_summaries')
@@ -62,17 +30,18 @@ describe.skipIf(!shouldRunTests)('Database Integration', () => {
   });
 
   it('should save and retrieve memory', async () => {
-    const memoryId = await memory.remember({
+    const memoryId = await testSetup.memory.remember({
       conversation: 'test-conv-1',
       content: 'Hello, this is a test memory',
       role: 'user',
       importance: 0.8,
+      timestamp: new Date(),
     });
 
     expect(memoryId).toMatch(/^mem_[0-9A-HJKMNP-TV-Z]{26}$/);
 
     // Retrieve the memory
-    const history = await memory.getHistory('test-conv-1');
+    const history = await testSetup.memory.getHistory('test-conv-1');
     expect(history).toHaveLength(1);
     expect(history[0].content).toBe('Hello, this is a test memory');
     expect(history[0].importance).toBe(0.8);
@@ -81,33 +50,42 @@ describe.skipIf(!shouldRunTests)('Database Integration', () => {
   it('should handle memory expiration', async () => {
     const pastDate = new Date(Date.now() - 1000); // 1 second ago
 
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-conv-2',
       content: 'This memory should expire',
+      role: 'user',
+      importance: 0.5,
+      timestamp: new Date(),
       expires: pastDate,
     });
 
     // Trigger cleanup
-    await testClient.query('SELECT cleanup_expired_memories()');
+    await testSetup.testClient.query('SELECT cleanup_expired_memories()');
 
     // Should not find expired memory
-    const history = await memory.getHistory('test-conv-2');
+    const history = await testSetup.memory.getHistory('test-conv-2');
     expect(history).toHaveLength(0);
   });
 
   it('should search memories with semantic similarity', async () => {
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-conv-3',
       content: 'The user likes coffee in the morning',
+      role: 'user',
+      importance: 0.5,
+      timestamp: new Date(),
     });
 
-    await memory.remember({
+    await testSetup.memory.remember({
       conversation: 'test-conv-3',
       content: 'The user prefers tea in the evening',
+      role: 'user',
+      importance: 0.5,
+      timestamp: new Date(),
     });
 
     // Semantic search should find coffee-related content even without exact match
-    const results = await memory.searchMemories('morning beverage preferences');
+    const results = await testSetup.memory.searchMemories('morning beverage preferences');
     expect(results.length).toBeGreaterThan(0);
 
     // Should find both tea and coffee as they're beverages
@@ -120,7 +98,7 @@ describe.skipIf(!shouldRunTests)('Database Integration', () => {
   it('should validate memory statistics function', async () => {
     // Skip if no memories stored yet
     try {
-      const { rows } = await testClient.query<{ get_memory_stats: unknown[] }>(
+      const { rows } = await testSetup.testClient.query<{ get_memory_stats: unknown[] }>(
         'SELECT get_memory_stats($1)',
         ['test-agent']
       );

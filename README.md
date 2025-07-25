@@ -63,14 +63,14 @@ await openai.chat.completions.create({
 
 - **Persistent Memory** - Conversations continue across sessions
 - **Multi-Model Support** - OpenAI, Anthropic, DeepSeek, Google, Meta + custom providers
-- **Prompt Caching** - Up to 75% cost savings with automatic caching (OpenAI, Anthropic, DeepSeek, Google)
+- **Local Embeddings** - Zero API costs for vector embeddings with Sentence Transformers
 - **Memory Compression** - Automatic summarization with 4 compression strategies
 - **Semantic Search** - Find relevant memories using AI embeddings
 - **Universal Tokenizer** - Accurate token counting based on official provider documentation
 - **TypeScript First** - Full type safety with autocomplete
 - **PostgreSQL Native** - Uses your existing database
 - **Zero-Cost Embeddings** - Local Sentence Transformers (@xenova/transformers)
-- **High Performance** - <5ms memory operations, <20ms vector search
+- **High Performance** - ~9ms memory operations, ~5ms vector search
 
 ### Coming Soon
 
@@ -135,7 +135,9 @@ await memory.initialize();
 const memoryId = await memory.remember({
   conversation: 'user-123',
   content: 'User prefers email notifications',
+  role: 'user',
   importance: 0.8,
+  timestamp: new Date(),
 });
 
 // Find related memories using vector similarity
@@ -176,29 +178,28 @@ const memory = new AgentMemory({
       provider: 'openai',
       model: 'gpt-4o',
       tokenLimits: { context: 128000, output: 4000 },
-      // Automatic prompt caching: Up to 75% cost savings + 80% latency reduction
-      // Cache hits for prompts 1024+ tokens with exact prefix matches
+      // High context limit: Supports large conversations
     },
     {
       name: 'claude-sonnet',
       provider: 'anthropic',
       model: 'claude-sonnet-4-20250514',
       tokenLimits: { context: 200000, output: 4000 },
-      // Context caching available: 90% cost savings on repeated prompts
+      // Large context window: Perfect for long conversations
     },
     {
       name: 'deepseek-coder',
       provider: 'deepseek',
       model: 'deepseek-coder',
       tokenLimits: { context: 32000, output: 4000 },
-      // KV cache available: ~90% cost reduction
+      // Cost-effective option for coding tasks
     },
     {
       name: 'gemini-pro',
       provider: 'google',
       model: 'gemini-1.5-pro',
       tokenLimits: { context: 1048576, output: 8192 },
-      // Context caching available: Significant cost reduction
+      // Massive context window: Handle very long conversations
     },
     {
       name: 'llama-3',
@@ -221,7 +222,7 @@ const memory = new AgentMemory({
 await memory.remember({
   conversation: userId,
   content: longText,
-  provider: 'gpt-4o', // Automatic prompt caching for repeated content
+  provider: 'gpt-4o', // Use OpenAI for this memory
 });
 ```
 
@@ -278,12 +279,16 @@ await memory.remember({
   conversation: userId,
   content: userMessage,
   role: 'user',
+  importance: 0.5,
+  timestamp: new Date(),
 });
 
 await memory.remember({
   conversation: userId,
   content: completion.choices[0].message.content,
   role: 'assistant',
+  importance: 0.7,
+  timestamp: new Date(),
 });
 ```
 
@@ -330,6 +335,8 @@ await memory.remember({
   conversation: userId,
   content: message.content[0].text,
   role: 'assistant',
+  importance: 0.7,
+  timestamp: new Date(),
 });
 ```
 
@@ -358,7 +365,10 @@ export async function POST(req: Request) {
   for (const message of messages) {
     await memory.remember({
       conversation: userId,
-      ...message,
+      role: message.role,
+      content: message.content,
+      importance: 0.5,
+      timestamp: new Date(),
     });
   }
 
@@ -430,9 +440,12 @@ const health = await memory.healthCheck();
 {
   conversation: string;    // Conversation ID
   content: string;         // Memory content
-  role?: 'user' | 'assistant' | 'system';
-  importance?: number;     // 0-1 relevance score
+  role: 'user' | 'assistant' | 'system'; // Required, defaults to 'user'
+  importance: number;      // 0-1 relevance score, defaults to 0.5
+  timestamp: Date;         // Required, defaults to new Date()
+  id?: string;             // Optional memory ID
   metadata?: Record<string, unknown>;
+  embedding?: number[];    // Optional vector embedding
   expires?: Date | string; // Expiration (e.g., '30d', '1h')
 }
 ```
@@ -484,6 +497,8 @@ class ChatBot {
       conversation: userId,
       content: message,
       role: 'user',
+      importance: 0.5,
+      timestamp: new Date(),
     });
 
     // Get relevant context
@@ -497,6 +512,8 @@ class ChatBot {
       conversation: userId,
       content: response,
       role: 'assistant',
+      importance: 0.7,
+      timestamp: new Date(),
     });
 
     return response;
@@ -615,6 +632,14 @@ npm run test:integration
 
 # All tests
 npm run test:all
+
+# Code quality checks
+npm run lint           # ESLint + Prettier
+npm run type-check     # TypeScript compilation
+npm run validate       # Full validation (lint + type-check + tests)
+
+# Performance benchmarks
+npm run benchmark      # Verify performance claims
 ```
 
 ### Database Requirements
@@ -624,12 +649,12 @@ npm run test:all
 
 ### Performance
 
-- **Memory operations**: <5ms p99
-- **Vector search**: <20ms p99
-- **Embedding generation**: ~10ms local
-- **Model size**: ~23MB (cached after first download)
-- **Token counting**: Sub-millisecond estimation, based on official provider ratios
-- **Prompt caching**: Up to 75% cost + 80% latency reduction (OpenAI automatic, others available)
+- **Memory operations**: ~9ms average (range: 5-22ms, first operation slower due to model loading)
+- **Vector search**: ~5ms average for semantic similarity search using pgvector
+- **Token counting**: <1ms sub-millisecond performance for all text sizes
+- **Embedding generation**: Local processing, no API calls required
+- **Model size**: ~80-90MB (all-MiniLM-L6-v2, cached after first download)
+- **Architecture**: Built for production scale with proper indexing and connection pooling
 
 ## Architecture
 

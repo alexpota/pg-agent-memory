@@ -7,42 +7,24 @@ import type {
   Message,
   ModelProvider,
 } from '../../src/types/index.js';
-import { Client } from 'pg';
+import { setupIntegrationTest, type TestSetup } from './helpers/testSetup.js';
 import { TIME_MS } from '../../src/utils/timeConstants.js';
 
-// Skip integration tests if no database URL provided
-const DATABASE_URL = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
-const shouldRunTests =
-  DATABASE_URL &&
-  DATABASE_URL !== 'postgresql://test:test@localhost:5432/test' &&
-  !DATABASE_URL.includes('fake') &&
-  !DATABASE_URL.includes('example');
-
-describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
-  let client: Client;
+describe.skipIf(!process.env.DATABASE_URL)('Multi-Model Integration', () => {
+  let testSetup: TestSetup;
   let memory: AgentMemory;
   let connectionString: string;
 
   beforeAll(async () => {
-    if (!DATABASE_URL) return;
-
-    connectionString = DATABASE_URL;
-    client = new Client({ connectionString });
-    await client.connect();
+    testSetup = await setupIntegrationTest('test-multi-model-agent');
+    connectionString = process.env.DATABASE_URL!;
   });
 
   afterAll(async () => {
     if (memory) {
       await memory.disconnect();
     }
-    if (client) {
-      // Clean up test data
-      await client.query('DROP TABLE IF EXISTS agent_memories CASCADE');
-      await client.query('DROP TABLE IF EXISTS agent_memory_shares CASCADE');
-      await client.query('DROP TABLE IF EXISTS agent_memory_summaries CASCADE');
-      await client.query('DROP TABLE IF EXISTS schema_migrations CASCADE');
-      await client.end();
-    }
+    await testSetup.cleanup();
   });
 
   describe('AgentMemory with Multi-Model Configuration', () => {
@@ -62,6 +44,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
         content: 'Hello, this is a test message for OpenAI compatibility',
         role: 'user',
         importance: 0.8,
+        timestamp: new Date(),
       };
 
       const memoryId = await memory.remember(message);
@@ -116,16 +99,18 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
           content: 'This message should be processed with Anthropic token counting',
           role: 'user',
           importance: 0.9,
+          timestamp: new Date(),
         },
         {
           conversation: 'multi-model-conv',
           content: 'And this response should also use the Anthropic multiplier',
           role: 'assistant',
           importance: 0.8,
+          timestamp: new Date(),
         },
       ];
 
-      const memoryIds = [];
+      const memoryIds: string[] = [];
       for (const message of messages) {
         const id = await memory.remember(message);
         memoryIds.push(id);
@@ -175,6 +160,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
         content: testMessage,
         role: 'user',
         importance: 0.7,
+        timestamp: new Date(),
       };
 
       await memory.remember(message);
@@ -214,6 +200,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
         content: 'Small message',
         role: 'user',
         importance: 0.5,
+        timestamp: new Date(),
       };
 
       await expect(memory.remember(smallMessage)).resolves.toMatch(/^mem_[A-Z0-9]+$/);
@@ -224,6 +211,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
         content: 'A'.repeat(2000), // Very large message
         role: 'user',
         importance: 0.5,
+        timestamp: new Date(),
       };
 
       await expect(memory.remember(largeMessage)).rejects.toThrow('Token limit exceeded');
@@ -258,18 +246,21 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
           content: 'I love programming in TypeScript',
           role: 'user' as const,
           importance: 0.8,
+          timestamp: new Date(),
         },
         {
           conversation: 'search-conv',
           content: 'JavaScript is also a great language',
           role: 'user' as const,
           importance: 0.7,
+          timestamp: new Date(),
         },
         {
           conversation: 'search-conv',
           content: 'Python is useful for data science',
           role: 'user' as const,
           importance: 0.6,
+          timestamp: new Date(),
         },
       ];
 
@@ -343,6 +334,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
       const compressionResult = await memory.compressMemories({
         strategy: 'time_based',
         timeThresholdDays: COMPRESSION_THRESHOLD_DAYS, // Compress memories older than 5 days
+        preserveRecentCount: 2, // Only preserve 2 most recent memories
       });
 
       expect(compressionResult.memoriesProcessed).toBe(MEMORY_COUNT);
@@ -470,6 +462,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
             provider: 'invalid-type' as ModelProvider, // Invalid provider type
             model: 'test-model',
             tokenLimits: { context: 4000, output: 1000 },
+            tokenMultiplier: 1.0,
           },
         ],
       };
@@ -504,6 +497,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
         content: 'Test message without default provider',
         role: 'user',
         importance: 0.7,
+        timestamp: new Date(),
       };
 
       const memoryId = await memory.remember(message);
@@ -527,6 +521,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
         content: 'Test with empty providers array',
         role: 'user',
         importance: 0.5,
+        timestamp: new Date(),
       };
 
       const memoryId = await memory.remember(message);
@@ -568,6 +563,7 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
           content: `Performance test message ${i}`,
           role: i % 2 === 0 ? 'user' : 'assistant',
           importance: 0.5,
+          timestamp: new Date(),
         })
       );
 
