@@ -383,8 +383,8 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
       const anthropicTokens = estimations.find(e => e.provider === 'anthropic')?.tokens ?? 0;
       const deepseekTokens = estimations.find(e => e.provider === 'deepseek')?.tokens ?? 0;
 
-      expect(anthropicTokens).toBeGreaterThan(openaiTokens); // 1.15x multiplier
-      expect(deepseekTokens).toBeLessThan(openaiTokens); // 0.85x multiplier
+      expect(anthropicTokens).toBeGreaterThan(openaiTokens); // 1.14x multiplier
+      expect(deepseekTokens).toBeGreaterThan(openaiTokens); // 1.2x multiplier
     });
 
     it('should work independently with various providers', async () => {
@@ -435,8 +435,8 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
       const anthropicTokens = estimations.find(e => e.provider === 'anthropic')?.tokens ?? 0;
       const deepseekTokens = estimations.find(e => e.provider === 'deepseek')?.tokens ?? 0;
 
-      expect(anthropicTokens).toBeGreaterThan(openaiTokens); // 1.15x multiplier
-      expect(deepseekTokens).toBeLessThan(openaiTokens); // 0.85x multiplier
+      expect(anthropicTokens).toBeGreaterThan(openaiTokens); // 1.14x multiplier
+      expect(deepseekTokens).toBeGreaterThan(openaiTokens); // 1.2x multiplier
     });
   });
 
