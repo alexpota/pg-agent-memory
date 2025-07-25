@@ -311,32 +311,41 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
       const oldDate = new Date();
       oldDate.setDate(oldDate.getDate() - 10); // 10 days ago
 
-      for (let i = 0; i < 10; i++) {
+      const MEMORY_COUNT = 10;
+      const OLDEST_MEMORY_DAYS = 20;
+      const BASE_IMPORTANCE = 0.3;
+      const IMPORTANCE_INCREMENT = 0.05;
+
+      for (let i = 0; i < MEMORY_COUNT; i++) {
+        const timestampDaysAgo = new Date();
+        timestampDaysAgo.setDate(timestampDaysAgo.getDate() - (OLDEST_MEMORY_DAYS - i)); // 20-11 days ago (older first)
+
         const message: Message = {
           conversation,
           content: `Old memory content ${i} with some details`,
           role: i % 2 === 0 ? 'user' : 'assistant',
-          importance: 0.5,
-          timestamp: oldDate,
+          importance: BASE_IMPORTANCE + i * IMPORTANCE_INCREMENT, // 0.3 to 0.75 importance
+          timestamp: timestampDaysAgo,
         };
         await memory.remember(message);
       }
 
       // Verify memories were stored with old timestamps
       const storedMemories = await memory.recall({ conversation, limit: 20 });
-      expect(storedMemories.messages).toHaveLength(10);
+      expect(storedMemories.messages).toHaveLength(MEMORY_COUNT);
 
       expect(storedMemories.messages[0].timestamp.getTime()).toBeLessThan(
         Date.now() - TIME_MS.WEEK
       );
 
       // Run compression
+      const COMPRESSION_THRESHOLD_DAYS = 5;
       const compressionResult = await memory.compressMemories({
         strategy: 'time_based',
-        timeThresholdDays: 5, // Compress memories older than 5 days
+        timeThresholdDays: COMPRESSION_THRESHOLD_DAYS, // Compress memories older than 5 days
       });
 
-      expect(compressionResult.memoriesProcessed).toBe(10);
+      expect(compressionResult.memoriesProcessed).toBe(MEMORY_COUNT);
       expect(compressionResult.memoriesCompressed).toBeGreaterThan(0);
       expect(compressionResult.summariesCreated).toBeGreaterThan(0);
       expect(compressionResult.tokensReclaimed).toBeGreaterThan(0);

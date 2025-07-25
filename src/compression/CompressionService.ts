@@ -111,7 +111,7 @@ export class CompressionService {
 
       // Calculate compression metrics
       const tokenCount = this.countTokens(summaryContent);
-      const actualCompressionRatio = tokenCount / originalTokenCount;
+      const actualCompressionRatio = Math.min(tokenCount / originalTokenCount, 1.0); // Cap at 1.0 for database constraint
 
       const summary: MemorySummary = {
         id: `sum_${ulid()}`,

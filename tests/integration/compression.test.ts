@@ -234,7 +234,7 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
         conversation: conversationId,
         content: `Test memory ${i} with substantial content for compression testing`,
         importance: BASE_IMPORTANCE + i * IMPORTANCE_INCREMENT,
-        timestamp: timeUtils.daysAgo(i + 15),
+        timestamp: timeUtils.daysAgo(MEMORY_COUNT + 15 - i), // Older memories have lower importance
       });
     }
 
