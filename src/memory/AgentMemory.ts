@@ -33,6 +33,7 @@ import { DatabaseMigrator } from '../db/migrations.js';
 import { EmbeddingService } from '../embeddings/EmbeddingService.js';
 import { CompressionService } from '../compression/CompressionService.js';
 import { UniversalTokenizer } from '../tokenization/UniversalTokenizer.js';
+import { TIME_MS } from '../utils/timeConstants.js';
 import { logger } from '../utils/logger.js';
 
 export class AgentMemory implements AgentMemoryInterface {
@@ -864,11 +865,11 @@ export class AgentMemory implements AgentMemoryInterface {
 
         switch (unit) {
           case 'h':
-            return new Date(now.getTime() + value * 60 * 60 * 1000);
+            return new Date(now.getTime() + value * TIME_MS.HOUR);
           case 'd':
-            return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
+            return new Date(now.getTime() + value * TIME_MS.DAY);
           case 'w':
-            return new Date(now.getTime() + value * 7 * 24 * 60 * 60 * 1000);
+            return new Date(now.getTime() + value * TIME_MS.WEEK);
         }
       }
 

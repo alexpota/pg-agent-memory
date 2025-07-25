@@ -8,6 +8,7 @@ import type {
   ModelProvider,
 } from '../../src/types/index.js';
 import { Client } from 'pg';
+import { TIME_MS } from '../../src/utils/timeConstants.js';
 
 // Skip integration tests if no database URL provided
 const DATABASE_URL = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
@@ -320,6 +321,14 @@ describe.skipIf(!shouldRunTests)('Multi-Model Integration', () => {
         };
         await memory.remember(message);
       }
+
+      // Verify memories were stored with old timestamps
+      const storedMemories = await memory.recall({ conversation, limit: 20 });
+      expect(storedMemories.messages).toHaveLength(10);
+
+      expect(storedMemories.messages[0].timestamp.getTime()).toBeLessThan(
+        Date.now() - TIME_MS.WEEK
+      );
 
       // Run compression
       const compressionResult = await memory.compressMemories({

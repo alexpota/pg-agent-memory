@@ -108,56 +108,6 @@ describe('DatabaseMigrator', () => {
       expect(hasCleanupFunction).toBe(true);
     });
 
-    it('should handle duplicate extension error gracefully', async () => {
-      // First call: Create schema_migrations table
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Second call: Check if migration already applied
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Third call: BEGIN transaction
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Fourth call: Run migration SQL (fails with duplicate extension)
-      mockClient.query.mockRejectedValueOnce(new Error('extension "vector" already exists'));
-      // Fifth call: ROLLBACK
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Sixth call: BEGIN for marking migration as applied
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Seventh call: INSERT migration record
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Eighth call: COMMIT
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Remaining calls for other migrations
-      mockClient.query.mockResolvedValue({
-        rows: [{ version: '002_enhanced_compression_schema' }],
-      });
-
-      await expect(migrator.migrate()).resolves.not.toThrow();
-    });
-
-    it('should handle duplicate table error gracefully', async () => {
-      // First call: Create schema_migrations table
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Second call: Check if migration already applied
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Third call: BEGIN transaction
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Fourth call: Run migration SQL (fails with duplicate table)
-      mockClient.query.mockRejectedValueOnce(new Error('relation "agent_memories" already exists'));
-      // Fifth call: ROLLBACK
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Sixth call: BEGIN for marking migration as applied
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Seventh call: INSERT migration record
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Eighth call: COMMIT
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
-      // Remaining calls for other migrations
-      mockClient.query.mockResolvedValue({
-        rows: [{ version: '002_enhanced_compression_schema' }],
-      });
-
-      await expect(migrator.migrate()).resolves.not.toThrow();
-    });
-
     it('should propagate serious database errors', async () => {
       mockClient.query.mockRejectedValue(new Error('Database connection lost'));
 
@@ -271,23 +221,6 @@ describe('DatabaseMigrator', () => {
       expect(mockClient.query).toHaveBeenCalled();
     });
 
-    it('should handle partial migration state', async () => {
-      // Same setup as duplicate table error test
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // Create schema_migrations table
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // Check migration applied
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
-      mockClient.query.mockRejectedValueOnce(new Error('relation already exists')); // Run migration
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN for marking applied
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // INSERT migration record
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
-      mockClient.query.mockResolvedValue({
-        rows: [{ version: '002_enhanced_compression_schema' }],
-      }); // Other migrations
-
-      await expect(migrator.migrate()).resolves.not.toThrow();
-    });
-
     it('should maintain consistent schema across runs', async () => {
       await migrator.migrate();
       const firstRunCalls = mockClient.query.mock.calls.length;
@@ -326,23 +259,6 @@ describe('DatabaseMigrator', () => {
   });
 
   describe('error recovery', () => {
-    it('should handle partial extension creation', async () => {
-      // Same setup as duplicate extension error test
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // Create schema_migrations table
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // Check migration applied
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
-      mockClient.query.mockRejectedValueOnce(new Error('extension "vector" already exists')); // Run migration
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN for marking applied
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // INSERT migration record
-      mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
-      mockClient.query.mockResolvedValue({
-        rows: [{ version: '002_enhanced_compression_schema' }],
-      }); // Other migrations
-
-      await expect(migrator.migrate()).resolves.not.toThrow();
-    });
-
     it('should handle permission errors', async () => {
       mockClient.query.mockRejectedValue(new Error('permission denied'));
 

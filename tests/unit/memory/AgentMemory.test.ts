@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Client } from 'pg';
 import { AgentMemory } from '../../../src/memory/AgentMemory.js';
 import { DatabaseMigrator } from '../../../src/db/migrations.js';
+import { timeUtils } from '../../../src/utils/timeConstants.js';
 import { EmbeddingService } from '../../../src/embeddings/EmbeddingService.js';
 import type { MemoryConfig, Message } from '../../../src/types/index.js';
 
@@ -388,7 +389,7 @@ describe('AgentMemory', () => {
           metadata: null,
           importance: 0.5,
           embedding: null,
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          created_at: timeUtils.daysAgo(7),
           expires_at: null,
         },
       ];

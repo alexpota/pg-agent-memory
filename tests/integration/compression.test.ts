@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
 import { AgentMemory } from '../../src/memory/AgentMemory.js';
+import { timeUtils } from '../../src/utils/timeConstants.js';
 
 // Skip integration tests if no database URL provided
 const DATABASE_URL = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
@@ -55,7 +56,7 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
         content: `Memory ${i}: User mentioned preference for ${i % 2 === 0 ? 'coffee' : 'tea'} at ${8 + i}:00 AM`,
         importance: 0.5 + (i % 3) * 0.2,
         // Make them old (more than 7 days ago)
-        timestamp: new Date(Date.now() - (8 + i) * 24 * 60 * 60 * 1000),
+        timestamp: timeUtils.daysAgo(8 + i),
       });
       memoryIds.push(id);
     }
@@ -107,7 +108,7 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
         conversation: conversationId,
         content: `Old memory ${i}: Discussion about project requirements and specifications`,
         importance: 0.6,
-        timestamp: new Date(Date.now() - (i + 10) * 24 * 60 * 60 * 1000),
+        timestamp: timeUtils.daysAgo(i + 10),
       });
     }
 
@@ -151,7 +152,7 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
         conversation: conversationId,
         content: `Memory ${i}: Various topics including ${i % 3 === 0 ? 'meetings' : i % 3 === 1 ? 'projects' : 'preferences'}`,
         importance: 0.2 + (i % 5) * 0.15, // Varied importance: 0.2 to 0.8
-        timestamp: new Date(Date.now() - (i + 5) * 24 * 60 * 60 * 1000),
+        timestamp: timeUtils.daysAgo(i + 5),
       });
     }
 
@@ -224,7 +225,7 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
         conversation: conversationId,
         content: `Test memory ${i} with substantial content for compression testing`,
         importance: 0.4 + i * 0.1,
-        timestamp: new Date(Date.now() - (i + 15) * 24 * 60 * 60 * 1000),
+        timestamp: timeUtils.daysAgo(i + 15),
       });
     }
 
@@ -297,21 +298,21 @@ describe.skipIf(!shouldRunTests)('Memory Compression Integration', () => {
       conversation: conversationId,
       content: 'User loves Italian cuisine and pasta dishes',
       importance: 0.5,
-      timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+      timestamp: timeUtils.daysAgo(20),
     });
 
     await memory.remember({
       conversation: conversationId,
       content: 'Discussion about favorite coffee brewing methods',
       importance: 0.4,
-      timestamp: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
+      timestamp: timeUtils.daysAgo(18),
     });
 
     await memory.remember({
       conversation: conversationId,
       content: 'User mentioned preference for outdoor activities',
       importance: 0.6,
-      timestamp: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000),
+      timestamp: timeUtils.daysAgo(16),
     });
 
     // Compress old memories

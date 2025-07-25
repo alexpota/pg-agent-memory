@@ -66,26 +66,7 @@ export class DatabaseMigrator {
           logger.info(`✅ Migration ${migration.version} applied successfully`);
         } catch (error) {
           await this.client.query('ROLLBACK');
-
-          // Check if it's a duplicate extension error (can be ignored)
-          const errorMessage = (error as Error).message;
-          if (errorMessage.includes('duplicate key value') && errorMessage.includes('pg_type')) {
-            logger.warn(`⚠️  pgvector extension already exists, continuing...`);
-
-            // Still need to mark migration as applied
-            await this.client.query('BEGIN');
-            await this.client.query(INSERT_MIGRATION_SQL, [migration.version]);
-            await this.client.query('COMMIT');
-          } else if (errorMessage.includes('already exists')) {
-            logger.warn(`⚠️  ${migration.description} already exists, continuing...`);
-
-            // Still need to mark migration as applied
-            await this.client.query('BEGIN');
-            await this.client.query(INSERT_MIGRATION_SQL, [migration.version]);
-            await this.client.query('COMMIT');
-          } else {
-            throw error;
-          }
+          throw error;
         }
       } else {
         logger.info(`⏭️  Migration ${migration.version} already applied`);
