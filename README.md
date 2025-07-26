@@ -12,10 +12,6 @@
 
 ### The Problem: AI Agents Forget Everything
 
-<table>
-<tr>
-<td width="50%">
-
 **❌ Without pg-agent-memory**
 
 ```js
@@ -32,9 +28,6 @@ await openai.chat.completions.create({
 // AI: "What language would you like to use?"
 // 😤 Forgot everything!
 ```
-
-</td>
-<td width="50%">
 
 **✅ With pg-agent-memory**
 
@@ -54,10 +47,6 @@ await openai.chat.completions.create({
 // AI: "I'll create a Python project for you!"
 // 🎯 Remembers everything!
 ```
-
-</td>
-</tr>
-</table>
 
 ## Features
 
@@ -474,6 +463,43 @@ Delete specific memory.
 
 Delete entire conversation.
 
+## Database Requirements
+
+- PostgreSQL 12+
+- pgvector extension
+
+## Performance
+
+- **Memory operations**: ~9ms average (range: 5-22ms, first operation slower due to model loading)
+- **Vector search**: ~5ms average for semantic similarity search using pgvector
+- **Token counting**: <1ms sub-millisecond performance for all text sizes
+- **Embedding generation**: Local processing, no API calls required
+- **Model size**: ~80-90MB (all-MiniLM-L6-v2, cached after first download)
+- **Architecture**: Built for production scale with proper indexing and connection pooling
+
+## Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   AgentMemory   │────│  EmbeddingService │────│ @xenova/trans.. │
+│                 │    │                  │    │   (Local Model) │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │
+         ▼
+┌─────────────────┐    ┌──────────────────┐
+│   PostgreSQL    │────│     pgvector     │
+│   (Memories)    │    │  (Vector Search) │
+└─────────────────┘    └──────────────────┘
+```
+
+**Components:**
+
+- **AgentMemory**: Main API for memory operations
+- **EmbeddingService**: Local text-to-vector conversion using @xenova/transformers
+- **PostgreSQL**: Persistent storage with ACID properties
+- **pgvector**: Efficient vector similarity search
+- **@xenova/transformers**: Local Sentence Transformers model (all-MiniLM-L6-v2)
+
 ## Examples
 
 ### Chatbot Integration
@@ -642,42 +668,6 @@ npm run validate       # Full validation (lint + type-check + tests)
 npm run benchmark      # Verify performance claims
 ```
 
-### Database Requirements
-
-- PostgreSQL 12+
-- pgvector extension
-
-### Performance
-
-- **Memory operations**: ~9ms average (range: 5-22ms, first operation slower due to model loading)
-- **Vector search**: ~5ms average for semantic similarity search using pgvector
-- **Token counting**: <1ms sub-millisecond performance for all text sizes
-- **Embedding generation**: Local processing, no API calls required
-- **Model size**: ~80-90MB (all-MiniLM-L6-v2, cached after first download)
-- **Architecture**: Built for production scale with proper indexing and connection pooling
-
-## Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   AgentMemory   │────│  EmbeddingService │────│ @xenova/trans.. │
-│                 │    │                  │    │   (Local Model) │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │
-         ▼
-┌─────────────────┐    ┌──────────────────┐
-│   PostgreSQL    │────│     pgvector     │
-│   (Memories)    │    │  (Vector Search) │
-└─────────────────┘    └──────────────────┘
-```
-
-**Components:**
-
-- **AgentMemory**: Main API for memory operations
-- **EmbeddingService**: Local text-to-vector conversion using @xenova/transformers
-- **PostgreSQL**: Persistent storage with ACID properties
-- **pgvector**: Efficient vector similarity search
-- **@xenova/transformers**: Local Sentence Transformers model (all-MiniLM-L6-v2)
 
 ## License
 
