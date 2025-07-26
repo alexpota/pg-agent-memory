@@ -114,7 +114,7 @@ async function runDemo() {
     console.log('  1. Ensure PostgreSQL is running and accessible');
     console.log('  2. Check your DATABASE_URL environment variable');
     console.log('  3. Ensure pgvector extension is installed: CREATE EXTENSION vector;');
-    console.log('  4. For Docker setup: docker-compose up -d');
+    console.log('  4. For Docker setup: docker compose up -d');
     process.exit(1);
   }
 }
