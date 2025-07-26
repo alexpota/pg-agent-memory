@@ -5,6 +5,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
+    // Run integration tests sequentially to avoid database race conditions
+    maxConcurrency: 1, // Force integration tests to run one at a time
+    pool: 'forks', // Use forks for better isolation
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

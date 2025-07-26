@@ -52,16 +52,14 @@ export async function setupIntegrationTest(
     await testClient.query('DELETE FROM agent_memories WHERE agent_id = $1', [targetAgentId]);
   };
 
-  // Full cleanup function
+  // Full cleanup function - clean up only this specific agent to avoid test interference
   const cleanup = async (): Promise<void> => {
     if (memory) {
       await memory.disconnect();
     }
     if (testClient) {
-      // Clean up all test data
-      await testClient.query("DELETE FROM agent_memory_summaries WHERE agent_id LIKE 'test-%'");
-      await testClient.query("DELETE FROM agent_memory_shares WHERE granted_by LIKE 'test-%'");
-      await testClient.query("DELETE FROM agent_memories WHERE agent_id LIKE 'test-%'");
+      // Clean up only this specific agent's data to avoid interfering with other running tests
+      await cleanupAgent(agentId);
       await testClient.end();
     }
   };

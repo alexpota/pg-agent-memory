@@ -172,7 +172,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
     try {
       const conversationId = `compression-test-4-${Date.now()}`;
       const startTime = new Date('2024-01-15T09:00:00Z');
-      const endTime = new Date('2024-01-15T13:00:00Z');
+      const endTime = new Date('2024-01-15T14:00:00Z'); // Extend to 2 PM to include all test memories
 
       // Add memories within specific time window - more memories for meaningful compression
       for (let i = 0; i < 10; i++) {
@@ -189,13 +189,13 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
         });
       }
 
-      // Add memory outside the window
+      // Add memory outside the window (after 2 PM)
       await testSetup.memory.remember({
         conversation: conversationId,
         content: 'Afternoon followup that should not be included',
         importance: 0.6,
         role: 'user',
-        timestamp: new Date('2024-01-15T14:00:00Z'),
+        timestamp: new Date('2024-01-15T15:00:00Z'), // 3 PM - clearly outside the window
       });
 
       const summary = await testSetup.memory.summarizeConversationWindow(conversationId, {
