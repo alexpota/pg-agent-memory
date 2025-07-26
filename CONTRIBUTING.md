@@ -1,20 +1,25 @@
 # Contributing to pg-agent-memory
 
-Thank you for your interest in contributing to pg-agent-memory! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to pg-agent-memory! We welcome contributions from the community and appreciate your help in making this project better.
 
 ## Development Setup
 
 ### Prerequisites
 
-- **Node.js**: v18.0.0 or higher
+- **Node.js**: v22.0.0 or higher
 - **PostgreSQL**: v12 or higher with pgvector extension
-- **npm**: v8.0.0 or higher
+- **Docker and Docker Compose** (recommended for development)
+
+### Peer Dependencies
+
+- **pg**: >=8.0.0 (PostgreSQL client library)
 
 ### Getting Started
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/[your-username]/pg-agent-memory.git
+   git fork https://github.com/alexpota/pg-agent-memory
+   git clone https://github.com/yourusername/pg-agent-memory.git
    cd pg-agent-memory
    ```
 
@@ -23,41 +28,56 @@ Thank you for your interest in contributing to pg-agent-memory! This document pr
    npm install
    ```
 
-3. **Set Up Database**
+3. **Start Development Environment (Docker-First Approach)**
    ```bash
-   # Install PostgreSQL and pgvector extension
-   # Create a test database
-   createdb pg_agent_memory_test
+   # Start PostgreSQL with pgvector
+   npm run dev:up
+   
+   # View database logs (optional)
+   npm run dev:logs
    ```
 
-4. **Environment Configuration**
+4. **Alternative: Manual PostgreSQL Setup**
+   ```bash
+   # If you prefer using local PostgreSQL
+   createdb agent_memory
+   psql agent_memory -c "CREATE EXTENSION IF NOT EXISTS vector;"
+   ```
+
+5. **Environment Configuration**
    ```bash
    cp .env.example .env
-   # Edit .env with your database connection details
+   # Edit .env with your database connection details (if needed)
    ```
 
-5. **Run Tests**
+6. **Run Tests**
    ```bash
-   npm test                    # Unit tests only
-   npm run test:integration    # Requires PostgreSQL
-   npm run test:all           # All tests
+   npm test                      # Unit tests only (no database needed)
+   npm run test:integration      # Integration tests with Docker PostgreSQL
+   npm run test:docker           # All tests with Docker setup
    ```
 
-6. **Build and Validate**
+7. **Build and Validate**
    ```bash
-   npm run build              # Build the package
-   npm run validate           # Full validation (recommended before commits)
-   npm run validate:quick     # Quick validation (type check + lint)
+   npm run build                 # Build the package
+   npm run type-check            # TypeScript validation
+   npm run lint                  # ESLint validation
    ```
 
 ## Development Workflow
 
 ### Branching Strategy
 
+We use a simplified Git workflow (as per CLAUDE.md):
+
 - **main**: Production-ready code
-- **develop**: Integration branch for features
-- **feature/[name]**: Individual feature branches
-- **fix/[name]**: Bug fix branches
+- **feat/feature-name**: New features
+- **fix/bug-name**: Bug fixes
+- **docs/topic**: Documentation updates
+- **chore/task**: Maintenance tasks
+- **test/improvement**: Test improvements
+- **refactor/component**: Code refactoring
+- **perf/optimization**: Performance improvements
 
 ### Commit Standards
 
@@ -82,13 +102,13 @@ chore: update dependencies
 
 ### Pre-commit Validation
 
-Our pre-commit hooks automatically run:
-1. **Type checking** - Ensures TypeScript compiles
-2. **Linting** - ESLint with auto-fix for changed files
-3. **Tests** - Unit tests must pass
-4. **Formatting** - Prettier formatting
+Our Husky pre-commit hooks automatically run:
+1. **Type checking** (`npm run type-check`) - Ensures TypeScript compiles
+2. **Linting and formatting** (`lint-staged`) - ESLint with auto-fix + Prettier for changed files only
+3. **Tests** (`npm test`) - Full unit test suite must pass
+4. **Build validation** - Ensures project builds successfully
 
-If validation fails, fix the issues and commit again.
+If validation fails, fix the issues and commit again. This prevents broken code from entering the repository.
 
 ## Code Standards
 
@@ -113,11 +133,14 @@ async getHistory(conversation: string, limit = 50): Promise<Message[]> {
 
 ### Testing Requirements
 
-- **Coverage**: Minimum 95% line coverage
-- **Test Types**:
-  - `*.unit.test.ts` - Unit tests with mocks
-  - `*.integration.test.ts` - Integration tests with real PostgreSQL
-  - `*.e2e.test.ts` - End-to-end workflow tests
+- **Coverage**: Maintain 85%+ test coverage
+- **Test Types** (following our naming conventions):
+  - `*.unit.test.ts` - Unit tests with mocked dependencies
+  - `*.basic.integration.test.ts` - Basic integration scenarios  
+  - `*.vector-search.integration.test.ts` - Vector operation validation
+  - `*.multi-agent.integration.test.ts` - Multi-agent memory sharing
+  - `*.e2e.test.ts` - Complete user workflow tests
+  - `*.benchmark.test.ts` - Performance measurement tests
 
 ```typescript
 describe('AgentMemory', () => {
@@ -160,7 +183,11 @@ describe('AgentMemory', () => {
 
 3. **Validate Changes**
    ```bash
-   npm run validate  # Must pass completely
+   npm run build                 # Build must succeed
+   npm run type-check            # TypeScript validation
+   npm run lint                  # ESLint validation
+   npm test                      # Unit tests must pass
+   npm run test:integration      # Integration tests (if applicable)
    ```
 
 4. **Commit Changes**
@@ -207,16 +234,34 @@ Brief description of changes and motivation.
 
 ```
 src/
-├── memory/           # Core memory management
-├── types/           # TypeScript definitions
-├── errors/          # Error classes
-├── db/             # Database schema and migrations
-└── index.ts        # Main exports
+├── core/               # Core AgentMemory class
+├── adapters/           # Database adapters
+├── embeddings/         # Embedding services
+├── tokenization/       # Token counting utilities
+├── migrations/         # Database migrations
+├── types/              # TypeScript definitions
+├── errors/             # Error classes
+└── index.ts            # Main exports
 
 tests/
-├── unit/           # Unit tests with mocks
-├── integration/    # Integration tests with real DB
-└── setup.ts       # Test configuration
+├── unit/               # Unit tests with mocks
+│   ├── AgentMemory.test.ts
+│   ├── compression.test.ts
+│   ├── db/
+│   │   └── migrations.test.ts
+│   ├── embeddings/
+│   │   └── EmbeddingService.test.ts
+│   ├── errors/
+│   ├── memory/
+│   │   └── AgentMemory.test.ts
+│   └── tokenization/
+│       └── UniversalTokenizer.test.ts
+├── integration/        # Integration tests with real DB
+│   ├── compression.test.ts
+│   ├── database.test.ts
+│   ├── embeddings.test.ts
+│   └── multi-model.test.ts
+└── setup.ts           # Test configuration and helpers
 ```
 
 ### Design Principles

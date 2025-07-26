@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # Fast fail on type errors first
 echo "🔍 Running TypeScript type check..."
 npm run type-check
@@ -9,6 +6,10 @@ npm run type-check
 echo "✨ Running lint-staged..."
 npx lint-staged
 
-# Run unit tests only (skip integration tests that need PostgreSQL)
+# Run unit tests (always)
 echo "🧪 Running unit tests..."
 npm run test
+
+# Run integration tests with Docker database
+echo "🐳 Running integration tests with Docker database..."
+npm run test:docker

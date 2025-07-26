@@ -10,12 +10,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export class DatabaseMigrator {
-  constructor(private readonly client: Client) {}
+  constructor(private readonly client: Client) {
+    if (!client) {
+      throw new Error('Database client is required');
+    }
+  }
 
   async migrate(): Promise<void> {
+    // Use advisory lock to serialize entire migration process across all concurrent processes
+    const MIGRATION_LOCK_ID = 123456789; // Consistent lock ID for migrations
+
     try {
-      await this.runMigrations();
+      // Acquire advisory lock - only one process can migrate at a time
+      await this.client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
+
+      try {
+        await this.runMigrations();
+      } finally {
+        // Always release the advisory lock
+        await this.client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+      }
     } catch (error) {
+      // Ensure lock is released even on error
+      try {
+        await this.client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+      } catch {
+        // Ignore unlock errors
+      }
       throw new DatabaseConnectionError(error as Error);
     }
   }
@@ -37,6 +58,11 @@ export class DatabaseMigrator {
         description: 'Create initial agent memories schema',
         sql: this.loadSchemaFile(),
       },
+      {
+        version: '002_enhanced_compression_schema',
+        description: 'Enhanced memory compression schema with comprehensive features',
+        sql: this.loadMigrationFile('002_enhanced_compression_schema.sql'),
+      },
     ];
 
     for (const migration of migrations) {
@@ -57,26 +83,7 @@ export class DatabaseMigrator {
           logger.info(`✅ Migration ${migration.version} applied successfully`);
         } catch (error) {
           await this.client.query('ROLLBACK');
-
-          // Check if it's a duplicate extension error (can be ignored)
-          const errorMessage = (error as Error).message;
-          if (errorMessage.includes('duplicate key value') && errorMessage.includes('pg_type')) {
-            logger.warn(`⚠️  pgvector extension already exists, continuing...`);
-
-            // Still need to mark migration as applied
-            await this.client.query('BEGIN');
-            await this.client.query(INSERT_MIGRATION_SQL, [migration.version]);
-            await this.client.query('COMMIT');
-          } else if (errorMessage.includes('already exists')) {
-            logger.warn(`⚠️  ${migration.description} already exists, continuing...`);
-
-            // Still need to mark migration as applied
-            await this.client.query('BEGIN');
-            await this.client.query(INSERT_MIGRATION_SQL, [migration.version]);
-            await this.client.query('COMMIT');
-          } else {
-            throw error;
-          }
+          throw error;
         }
       } else {
         logger.info(`⏭️  Migration ${migration.version} already applied`);
@@ -87,6 +94,11 @@ export class DatabaseMigrator {
   private loadSchemaFile(): string {
     const schemaPath = join(__dirname, 'schema.sql');
     return readFileSync(schemaPath, 'utf-8');
+  }
+
+  private loadMigrationFile(filename: string): string {
+    const migrationPath = join(__dirname, 'migrations', filename);
+    return readFileSync(migrationPath, 'utf-8');
   }
 
   async validateSchema(): Promise<boolean> {

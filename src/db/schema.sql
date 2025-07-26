@@ -1,6 +1,18 @@
--- Enable pgvector extension (ignore if already exists)
--- Note: pgvector/pgvector:pg16 image already has the extension available
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Enable pgvector extension with advisory lock to prevent race conditions
+DO $$
+BEGIN
+    PERFORM pg_advisory_lock(hashtext('pgvector_extension_creation'));
+    CREATE EXTENSION IF NOT EXISTS vector;
+    PERFORM pg_advisory_unlock(hashtext('pgvector_extension_creation'));
+EXCEPTION 
+    WHEN undefined_file THEN
+        PERFORM pg_advisory_unlock(hashtext('pgvector_extension_creation'));
+        RAISE EXCEPTION 'pgvector extension not available. Please install pgvector first.';
+    WHEN OTHERS THEN
+        PERFORM pg_advisory_unlock(hashtext('pgvector_extension_creation'));
+        RAISE;
+END
+$$;
 
 -- Memories table for storing agent conversations and context
 CREATE TABLE IF NOT EXISTS agent_memories (

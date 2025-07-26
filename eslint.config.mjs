@@ -45,6 +45,14 @@ export default [
   },
   {
     files: ['**/*.test.ts', '**/*.spec.ts'],
+    languageOptions: {
+      globals: {
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+      },
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       'sonarjs/no-duplicate-string': 'off',
