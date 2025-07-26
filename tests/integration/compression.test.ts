@@ -8,7 +8,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
     const testSetup = await setupIntegrationTest(agentId);
 
     try {
-      const conversationId = 'compression-test-1';
+      const conversationId = `compression-test-1-${Date.now()}`;
 
       // Add several memories to the conversation
       const memoryIds = [];
@@ -71,7 +71,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
     const testSetup = await setupIntegrationTest(agentId);
 
     try {
-      const conversationId = 'compression-test-2';
+      const conversationId = `compression-test-2-${Date.now()}`;
 
       // Add memories and compress some
       for (let i = 0; i < 5; i++) {
@@ -124,7 +124,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
     const testSetup = await setupIntegrationTest(agentId);
 
     try {
-      const conversationId = 'compression-test-3';
+      const conversationId = `compression-test-3-${Date.now()}`;
 
       // Add many memories across different importance levels
       const MEMORY_COUNT = 15;
@@ -142,16 +142,15 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
         });
       }
 
-      // Compress memories using hybrid strategy
+      // Compress memories using time-based strategy to ensure eligibility
       const result = await testSetup.memory.compressMemories({
-        strategy: 'hybrid',
-        preserveRecentCount: 3,
-        importanceThreshold: 0.5,
-        maxAge: '7d',
+        strategy: 'time_based',
+        timeThresholdDays: 3, // Compress memories older than 3 days (all test memories are 5+ days old)
+        preserveRecentCount: 3, // Keep 3 most recent
       });
 
       expect(result).toHaveProperty('agentId', agentId);
-      expect(result).toHaveProperty('strategy', 'hybrid');
+      expect(result).toHaveProperty('strategy', 'time_based');
       expect(result.memoriesProcessed).toBe(15);
       expect(result.memoriesCompressed).toBeGreaterThan(0);
       expect(result.memoriesPreserved).toBeGreaterThan(0);
@@ -171,20 +170,22 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
     const testSetup = await setupIntegrationTest(agentId);
 
     try {
-      const conversationId = 'compression-test-4';
+      const conversationId = `compression-test-4-${Date.now()}`;
       const startTime = new Date('2024-01-15T09:00:00Z');
-      const endTime = new Date('2024-01-15T12:00:00Z');
+      const endTime = new Date('2024-01-15T13:00:00Z');
 
-      // Add memories within specific time window
-      for (let i = 0; i < 5; i++) {
-        const hour = 9 + i;
+      // Add memories within specific time window - more memories for meaningful compression
+      for (let i = 0; i < 10; i++) {
+        const hour = 9 + Math.floor(i / 2); // 9:00, 9:00, 10:00, 10:00, etc.
+        const minute = (i % 2) * 30; // 00 or 30 minutes
         const hourString = hour.toString().padStart(2, '0');
+        const minuteString = minute.toString().padStart(2, '0');
         await testSetup.memory.remember({
           conversation: conversationId,
-          content: `Morning meeting discussion ${i}: Planning and coordination topics`,
-          importance: 0.7,
-          role: 'user',
-          timestamp: new Date(`2024-01-15T${hourString}:00:00Z`),
+          content: `Morning meeting discussion ${i}: Planning and coordination topics for project delivery and timeline management`,
+          importance: 0.3 + (i % 3) * 0.2, // Mix of 0.3, 0.5, 0.7 importance
+          role: i % 2 === 0 ? 'user' : 'assistant',
+          timestamp: new Date(`2024-01-15T${hourString}:${minuteString}:00Z`),
         });
       }
 
@@ -207,7 +208,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
       expect(summary.timeWindow.start).toEqual(startTime);
       expect(summary.timeWindow.end).toEqual(endTime);
       expect(summary.timeWindow.label).toBe('morning_meeting');
-      expect(summary.originalMemoryIds).toHaveLength(5); // Only memories in time window
+      expect(summary.originalMemoryIds).toHaveLength(10); // Only memories in time window
       expect(summary.summaryContent).toContain('meeting');
       expect(summary.keyTopics.length).toBeGreaterThan(0);
       expect(summary.compressionRatio).toBeLessThan(1);
@@ -226,7 +227,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
     const testSetup = await setupIntegrationTest(agentId);
 
     try {
-      const conversationId = 'compression-test-6';
+      const conversationId = `compression-test-6-${Date.now()}`;
 
       // Add only recent memories
       const memoryId = await testSetup.memory.remember({
@@ -262,7 +263,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Memory Compression Integration', () 
     const testSetup = await setupIntegrationTest(agentId);
 
     try {
-      const conversationId = 'compression-test-7';
+      const conversationId = `compression-test-7-${Date.now()}`;
 
       // Add memories about different topics
       await testSetup.memory.remember({

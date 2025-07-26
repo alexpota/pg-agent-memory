@@ -10,11 +10,6 @@ npx lint-staged
 echo "🧪 Running unit tests..."
 npm run test
 
-# Run integration tests if DATABASE_URL is available
-if [ ! -z "$DATABASE_URL" ]; then
-  echo "🔗 DATABASE_URL detected, running integration tests..."
-  npm run test:integration
-else
-  echo "⚠️  No DATABASE_URL - skipping integration tests (may fail in CI)"
-  echo "   Set DATABASE_URL to catch integration issues locally"
-fi
+# Run integration tests with Docker database
+echo "🐳 Running integration tests with Docker database..."
+npm run test:docker

@@ -1,64 +1,70 @@
 #!/bin/bash
 
 # Docker integration test runner for pg-agent-memory
-# Spins up PostgreSQL with pgvector for testing
+# Uses docker-compose for reliable PostgreSQL with pgvector setup
 
 set -e
 
-echo "🐳 Starting PostgreSQL with pgvector in Docker..."
+echo "🐳 Starting PostgreSQL with pgvector using docker-compose..."
 
-# Container name
-CONTAINER_NAME="pg-agent-memory-test"
-DB_NAME="agent_memory_test"
-DB_USER="test_user"
-DB_PASSWORD="test_pass"
-DB_PORT="5433"
-
-# Stop and remove existing container if exists
-docker stop $CONTAINER_NAME 2>/dev/null || true
-docker rm $CONTAINER_NAME 2>/dev/null || true
-
-# Start PostgreSQL with pgvector
-echo "📦 Starting PostgreSQL 16 with pgvector..."
-
-# Try to pull image first (ignore credential errors)
-docker pull pgvector/pgvector:pg16 2>/dev/null || echo "⚠️  Could not pull image, will try to use local or let Docker pull it..."
-
-# Run container
-docker run -d \
-  --name $CONTAINER_NAME \
-  -e POSTGRES_DB=$DB_NAME \
-  -e POSTGRES_USER=$DB_USER \
-  -e POSTGRES_PASSWORD=$DB_PASSWORD \
-  -p $DB_PORT:5432 \
-  pgvector/pgvector:pg16
-
-# Wait for PostgreSQL to be ready
-echo "⏳ Waiting for PostgreSQL to start..."
-sleep 5
-
-# Check if container is running
-if ! docker ps | grep -q $CONTAINER_NAME; then
-  echo "❌ Failed to start PostgreSQL container"
-  exit 1
+# Detect docker compose command
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+elif docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+else
+    echo "❌ Neither 'docker-compose' nor 'docker compose' found. Please install Docker Compose."
+    exit 1
 fi
 
-# Set test database URL
-export DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@localhost:$DB_PORT/$DB_NAME"
-export TEST_DATABASE_URL=$DATABASE_URL
+echo "ℹ️ Using: $DOCKER_COMPOSE"
+
+# Function to cleanup on exit
+cleanup() {
+    echo "🧹 Cleaning up Docker containers..."
+    $DOCKER_COMPOSE down -v
+}
+trap cleanup EXIT
+
+# Start PostgreSQL container
+echo "🚀 Starting PostgreSQL container..."
+$DOCKER_COMPOSE up -d postgres
+
+# Wait for PostgreSQL to be healthy
+echo "⏳ Waiting for PostgreSQL to be ready..."
+for i in {1..30}; do
+    if $DOCKER_COMPOSE exec -T postgres pg_isready -h localhost -p 5432 -U agent_user &> /dev/null; then
+        echo "✅ PostgreSQL is ready!"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "❌ PostgreSQL failed to start after 60 seconds"
+        $DOCKER_COMPOSE logs postgres
+        exit 1
+    fi
+    echo "⏳ Waiting for PostgreSQL... ($i/30)"
+    sleep 2
+done
+
+# Set test database URL (matches docker-compose.yml)
+export DATABASE_URL="postgresql://agent_user:agent_pass@localhost:5433/agent_memory"
+export TEST_DATABASE_URL="$DATABASE_URL"
+export NODE_ENV=test
 
 echo "✅ PostgreSQL ready at: $DATABASE_URL"
 
-# Run tests sequentially to avoid race conditions
+# Run comprehensive test suite
 echo ""
-echo "🧪 Running integration tests..."
-echo "Using DATABASE_URL: $DATABASE_URL"
-echo "Running database tests..."
-DATABASE_URL="$DATABASE_URL" npx vitest run tests/integration/database.test.ts
+echo "🔬 Running unit tests (fast, no database required)..."
+npm test
 
 echo ""
-echo "Running embeddings tests..."
-DATABASE_URL="$DATABASE_URL" npx vitest run tests/integration/embeddings.test.ts
+echo "🔬 Running integration tests with PostgreSQL..."
+npm run test:integration
+
+echo ""
+echo "🏃 Running performance benchmarks..."
+npm run benchmark
 
 # Run examples if requested
 if [ "$1" = "--with-examples" ]; then
@@ -67,10 +73,4 @@ if [ "$1" = "--with-examples" ]; then
   npm run example:all
 fi
 
-# Cleanup
-echo ""
-echo "🧹 Cleaning up..."
-docker stop $CONTAINER_NAME
-docker rm $CONTAINER_NAME
-
-echo "✅ Docker tests complete!"
+echo "✅ All Docker tests completed successfully!"
