@@ -24,7 +24,7 @@ export const ModelProviderConfigSchema = z.object({
   name: z.string().min(1),
   provider: ModelProviderSchema,
   apiKey: z.string().optional(), // Optional for estimation-only usage
-  baseURL: z.string().url().optional(),
+  baseURL: z.url().optional(),
   model: z.string().default('default'),
   tokenLimits: z.object({
     context: z.number().positive().default(4000),
@@ -73,7 +73,8 @@ export const MessageSchema = z.object({
   conversation: z.string(),
   content: z.string(),
   role: z.enum(['user', 'assistant', 'system']).default('user'),
-  metadata: z.record(z.unknown()).optional(),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  metadata: z.record(z.string(), z.unknown()).optional(),
   importance: z.number().min(0).max(1).default(0.5),
   embedding: z.array(z.number()).optional(),
   timestamp: z.date().default(() => new Date()),
@@ -107,7 +108,8 @@ export const MemoryFilterSchema = z.object({
       end: z.date().optional(),
     })
     .optional(),
-  metadata: z.record(z.unknown()).optional(),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  metadata: z.record(z.string(), z.unknown()).optional(),
   limit: z.number().positive().optional(),
   offset: z.number().min(0).optional(),
 });
@@ -226,7 +228,8 @@ export const MemorySummarySchema = z.object({
   originalTokenCount: z.number(),
   embedding: z.array(z.number()).optional(),
   createdAt: z.date(),
-  metadata: z.record(z.unknown()).optional(),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type MemorySummary = z.infer<typeof MemorySummarySchema>;
