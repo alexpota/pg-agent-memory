@@ -303,7 +303,7 @@ export class CompressionService {
   private countTokens(text: string): number {
     try {
       return this.tokenizer.encode(text).length;
-    } catch (error) {
+    } catch {
       // Fallback to word-based estimation if tokenizer fails
       return Math.ceil(text.split(/\s+/).length * 1.3);
     }
