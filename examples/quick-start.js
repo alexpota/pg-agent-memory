@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Quick Start - Show core value in 8 lines
-// Setup: docker-compose up -d (starts PostgreSQL)
+// Setup: docker compose up -d (starts PostgreSQL)
 import { AgentMemory } from '../dist/index.js';
 
 const memory = new AgentMemory({ 

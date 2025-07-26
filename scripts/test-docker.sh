@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # Docker integration test runner for pg-agent-memory
-# Uses docker-compose for reliable PostgreSQL with pgvector setup
+# Uses docker compose for reliable PostgreSQL with pgvector setup
 
 set -e
 
-echo "🐳 Starting PostgreSQL with pgvector using docker-compose..."
+echo "🐳 Starting PostgreSQL with pgvector using docker compose..."
 
-# Detect docker compose command
-if command -v docker-compose &> /dev/null; then
-    DOCKER_COMPOSE="docker-compose"
-elif docker compose version &> /dev/null; then
+# Detect docker compose command (prefer modern 'docker compose')
+if docker compose version &> /dev/null; then
     DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
 else
-    echo "❌ Neither 'docker-compose' nor 'docker compose' found. Please install Docker Compose."
+    echo "❌ Docker Compose not found. Please install Docker with Compose plugin."
     exit 1
 fi
 
@@ -46,7 +46,7 @@ for i in {1..30}; do
     sleep 2
 done
 
-# Set test database URL (matches docker-compose.yml)
+# Set test database URL (matches docker compose configuration)
 export DATABASE_URL="postgresql://agent_user:agent_pass@localhost:5433/agent_memory"
 export TEST_DATABASE_URL="$DATABASE_URL"
 export NODE_ENV=test

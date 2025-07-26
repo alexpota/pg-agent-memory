@@ -74,7 +74,7 @@ await openai.chat.completions.create({
 npm install pg-agent-memory
 
 # Start PostgreSQL with Docker (includes pgvector)
-docker-compose up -d
+docker compose up -d
 
 # Run example
 npm start
@@ -91,8 +91,8 @@ npm install pg-agent-memory
 **Option 1: Docker (Recommended)**
 
 ```bash
-# Use included docker-compose.yml
-docker-compose up -d
+# Use included docker compose configuration
+docker compose up -d
 ```
 
 **Option 2: Existing PostgreSQL**

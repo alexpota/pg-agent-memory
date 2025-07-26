@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Basic Usage - Essential CRUD operations
-// Setup: docker-compose up -d (starts PostgreSQL)
+// Setup: docker compose up -d (starts PostgreSQL)
 import { AgentMemory } from '../dist/index.js';
 
 const memory = new AgentMemory({ 

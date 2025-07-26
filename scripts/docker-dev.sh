@@ -15,12 +15,15 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check if docker-compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo "⚠️  docker-compose not found, trying 'docker compose'..."
+# Check docker compose command (prefer modern 'docker compose')
+if docker compose version &> /dev/null 2>&1; then
     COMPOSE_CMD="docker compose"
-else
+elif command -v docker-compose &> /dev/null; then
+    echo "⚠️  Using legacy docker-compose command. Consider updating to Docker with Compose plugin."
     COMPOSE_CMD="docker-compose"
+else
+    echo "❌ Docker Compose not found. Please install Docker with Compose plugin."
+    exit 1
 fi
 
 # Parse command
