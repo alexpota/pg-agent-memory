@@ -3,10 +3,12 @@
 > Stateful AI agent memory layer for PostgreSQL with pgvector. TypeScript-first with intelligent context management and semantic search.
 
 [![npm version](https://img.shields.io/npm/v/pg-agent-memory.svg)](https://www.npmjs.com/package/pg-agent-memory)
-[![Node.js](https://img.shields.io/node/v/pg-agent-memory.svg)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Test Coverage](https://img.shields.io/badge/coverage-85%25-green.svg)](#testing)
+[![Downloads](https://img.shields.io/npm/dm/pg-agent-memory.svg)](https://www.npmjs.com/package/pg-agent-memory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![Node.js CI](https://github.com/alexpota/pg-agent-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/alexpota/pg-agent-memory/actions/workflows/ci.yml)
+[![Test Coverage](https://img.shields.io/badge/coverage-85%25-green.svg)](#testing)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/node/v/pg-agent-memory.svg)](https://nodejs.org/)
 
 ## Why pg-agent-memory?
 
