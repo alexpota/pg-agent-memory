@@ -115,8 +115,8 @@
     "@semantic-release/changelog": "^6.0.3",
     "@types/node": "^24.1.0",
     "@types/pg": "^8.15.4",
-    "@typescript-eslint/eslint-plugin": "^8.38.0",
-    "@typescript-eslint/parser": "^8.38.0",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
     "@vitest/coverage-v8": "^3.2.4",
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
@@ -133,8 +133,8 @@
     "semantic-release": "^24.2.7",
     "tsup": "^8.0.0",
     "tsx": "^4.20.3",
-    "typedoc": "^0.28.7",
-    "typescript": "^5.8.3",
+    "typedoc": "^0.28.13",
+    "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }
 }
